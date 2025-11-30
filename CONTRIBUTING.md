@@ -27,6 +27,17 @@ We welcome contributions! Please follow these guidelines to ensure a smooth proc
     git checkout -b feature/my-awesome-infra
     ```
 
+5. **Renaming files**: Use `git mv` to preserve file history:
+
+    ```bash
+    # ✅ Correct - preserves git history
+    git mv old_name.sh new_name.sh
+
+    # ❌ Incorrect - breaks git history
+    rm old_name.sh
+    touch new_name.sh
+    ```
+
 ## Style Guide
 
 This section outlines the coding, documentation, and aesthetic standards for the `kanoa-mlops` repository.
