@@ -1,0 +1,16 @@
+name: kanoa-mlops
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.12
+  - pip
+  - huggingface_hub
+  - docker-compose
+  - curl
+  - jq
+  - pip:
+    - kanoa[vllm]
+    - vllm>=0.6.0  # Ensure vLLM version supports Gemma 3
+    - notebook
+    - ipywidgets
