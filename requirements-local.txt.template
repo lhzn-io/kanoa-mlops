@@ -1,0 +1,20 @@
+# Local development requirements (GITIGNORED)
+# This file overrides requirements.txt for local co-development of kanoa + kanoa-mlops
+#
+# Setup:
+#   cp requirements-local.txt.template requirements-local.txt
+#   pip install -r requirements-local.txt
+#
+# This installs kanoa as an editable package from your local sibling directory,
+# so changes to ../kanoa are immediately reflected without reinstalling.
+
+# Editable local kanoa with all backends + notebook display
+-e ../kanoa[all]
+
+# Alternative: select specific backends to reduce dependencies
+# -e ../kanoa[gemini,notebook]      # Gemini only
+# -e ../kanoa[claude,notebook]      # Claude only
+# -e ../kanoa[gemini,claude]        # Multiple backends, no notebook extras
+
+# Include dev dependencies (linting, testing, etc.)
+-r requirements-dev.txt

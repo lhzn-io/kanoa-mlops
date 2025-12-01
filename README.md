@@ -14,9 +14,14 @@ This repository provides production-ready infrastructure for:
 
 ### Prerequisites
 
-- Docker and Docker Compose
-- NVIDIA GPU with CUDA support (for vLLM)
+- Docker and Docker Compose (or `docker compose` plugin)
+- **NVIDIA GPU** (required for vLLM - Intel/AMD GPUs not supported)
 - Conda (optional, for environment management)
+
+#### WSL2 Users
+
+⚠️ If running on WSL2, the NVIDIA driver must be installed on **Windows** (not inside WSL).
+See [docker/vllm/README.md](docker/vllm/README.md#wsl2-windows-subsystem-for-linux) for detailed setup.
 
 ### 1. Setup Environment
 
@@ -73,21 +78,56 @@ print(result.text)
 ```text
 kanoa-mlops/
 ├── docker/
-│   ├── vllm/              # vLLM serving containers
-│   │   ├── docker-compose.yml
-│   │   ├── Dockerfile
-│   │   └── README.md
-│   ├── pgvector/          # PostgreSQL + pgvector (future)
-│   └── embeddings/        # Embedding models (future)
-├── kubernetes/            # K8s manifests (future)
+│   └── vllm/              # Local vLLM Docker Compose setup
+├── infrastructure/
+│   └── gcp/               # GCP Terraform for cloud GPU instances
 ├── examples/
 │   ├── quickstart-gemma3.py
 │   └── quickstart-molmo.py
 ├── scripts/
 │   └── download-models.sh
-├── environment.yml        # Conda environment
-└── README.md
+├── docs/
+│   └── planning/          # Architecture and planning docs
+└── environment.yml        # Conda environment
 ```
+
+## Deployment Options
+
+### Option 1: Local Docker (NVIDIA GPU Required)
+
+Best for: Development with a local NVIDIA GPU.
+
+```bash
+cd docker/vllm
+docker-compose up -d
+```
+
+See [docker/vllm/README.md](docker/vllm/README.md) for details.
+
+### Option 2: GCP Cloud GPU (Recommended)
+
+Best for: Users without NVIDIA GPUs, or for production workloads.
+
+Features:
+
+- **L4 GPU** (~$0.70/hr) - 24GB VRAM for 7B-13B models
+- **Auto-shutdown** after idle timeout (default: 30 min)
+- **Firewall** restricted to your IP only
+
+```bash
+cd infrastructure/gcp
+
+# Configure (edit with your project_id and IP)
+cp terraform.tfvars.example terraform.tfvars
+
+# Deploy
+terraform init
+terraform apply
+
+# Use the output API endpoint with kanoa
+```
+
+See [infrastructure/gcp/README.md](infrastructure/gcp/README.md) for full setup.
 
 ## Supported Models
 

@@ -1,0 +1,24 @@
+# kanoa-mlops contributor/developer requirements
+# Includes all user requirements plus development tools
+#
+# For co-development with local kanoa repo, use requirements-local.txt instead:
+#   cp requirements-local.txt.template requirements-local.txt
+#   pip install -r requirements-local.txt
+
+-r requirements.txt
+
+# Linting & formatting (ruff replaces black, isort, flake8)
+ruff>=0.14.0
+mypy>=1.0.0
+pre-commit>=3.0.0
+
+# Testing
+pytest>=7.0.0
+
+# Documentation
+# (none currently)
+
+# Note: The following are installed via system package manager or standalone:
+# - terraform (https://developer.hashicorp.com/terraform/install)
+# - shellcheck (apt install shellcheck / brew install shellcheck)
+# - gcloud CLI (https://cloud.google.com/sdk/docs/install)

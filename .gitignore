@@ -15,6 +15,9 @@ htmlcov/
 venv/
 env/
 
+# Local development overrides
+requirements-local.txt
+
 # IDE
 .vscode/*
 !.vscode/extensions.json

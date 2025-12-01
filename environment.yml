@@ -1,16 +1,19 @@
+# Contributor/developer environment for kanoa-mlops
+# For users: pip install -r requirements.txt
 name: kanoa-mlops
 channels:
   - conda-forge
   - defaults
 dependencies:
-  - python=3.12
+  - python=3.11
   - pip
-  - huggingface_hub
-  - docker-compose
+  # Infrastructure tools
+  - terraform>=1.5.0
+  - google-cloud-sdk
+  # Linting
+  - shellcheck
+  # Utilities
   - curl
   - jq
   - pip:
-    - kanoa[vllm]
-    - vllm>=0.6.0  # Ensure vLLM version supports Gemma 3
-    - notebook
-    - ipywidgets
+    - -r requirements-dev.txt

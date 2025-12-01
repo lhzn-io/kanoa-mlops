@@ -42,6 +42,21 @@ We welcome contributions! Please follow these guidelines to ensure a smooth proc
 
 This section outlines the coding, documentation, and aesthetic standards for the `kanoa-mlops` repository.
 
+### 0. Tooling
+
+We use [Ruff](https://docs.astral.sh/ruff/) for Python linting and formatting (replaces black, isort, flake8).
+
+```bash
+# Format code
+ruff format .
+
+# Check for issues (auto-fix where possible)
+ruff check --fix .
+
+# Run all pre-commit hooks
+pre-commit run --all-files
+```
+
 ### 1. Naming Conventions
 
 #### Project Name

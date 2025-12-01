@@ -1,0 +1,84 @@
+# kanoa-mlops project configuration
+# This is primarily an infrastructure repo, so Python tooling is minimal
+
+[project]
+name = "kanoa-mlops"
+version = "0.1.0"
+description = "Infrastructure for kanoa local AI interpretation"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.11"
+
+# =============================================================================
+# Ruff - Linting and formatting
+# =============================================================================
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+# Fix violations automatically where possible
+fix = true
+
+# Exclude common non-source directories
+exclude = [
+    ".git",
+    ".mypy_cache",
+    ".ruff_cache",
+    ".venv",
+    "__pycache__",
+    "build",
+    "dist",
+]
+
+[tool.ruff.lint]
+select = [
+    # pyflakes
+    "F",
+    # pycodestyle
+    "E", "W",
+    # isort
+    "I",
+    # flake8-bugbear
+    "B",
+    # flake8-simplify
+    "SIM",
+    # Ruff-specific rules
+    "RUF",
+]
+
+ignore = [
+    # Line too long - formatter handles this
+    "E501",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Examples/notebooks can be more relaxed
+# SIM112: Terraform env vars must be lowercase (TF_VAR_xxx convention)
+"examples/**" = ["E722", "T201", "F841", "SIM112"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["kanoa"]
+force-single-line = false
+combine-as-imports = true
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+# =============================================================================
+# Mypy - Type checking (minimal for infra repo)
+# =============================================================================
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true
+
+# =============================================================================
+# Pytest
+# =============================================================================
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]

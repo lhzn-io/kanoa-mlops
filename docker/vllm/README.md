@@ -4,20 +4,51 @@ Docker Compose setup for serving Molmo models with vLLM.
 
 ## Prerequisites
 
-1. **NVIDIA GPU** with CUDA support
-2. **NVIDIA Container Toolkit** installed:
+1. **NVIDIA GPU** (required - vLLM does not support Intel or AMD GPUs)
+2. **Docker** with GPU support
+
+### Native Linux
+
+Install the **NVIDIA Container Toolkit**:
+
+```bash
+# Ubuntu/Debian
+distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
+curl -s -L https://nvidia.github.io/nvidia-docker/gpgkey | sudo apt-key add -
+curl -s -L https://nvidia.github.io/nvidia-docker/$distribution/nvidia-docker.list | \
+  sudo tee /etc/apt/sources.list.d/nvidia-docker.list
+sudo apt-get update && sudo apt-get install -y nvidia-container-toolkit
+sudo systemctl restart docker
+```
+
+### WSL2 (Windows Subsystem for Linux)
+
+⚠️ For WSL2, GPU drivers must be installed on **Windows**, not inside WSL.
+
+1. Install the latest [NVIDIA GPU driver](https://www.nvidia.com/drivers) on Windows
+   (Game Ready or Studio driver — these include WSL support since driver 470+)
+
+2. Install Docker Desktop for Windows with WSL2 backend, **OR** install Docker inside WSL:
 
    ```bash
-   # Ubuntu/Debian
-   distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
-   curl -s -L https://nvidia.github.io/nvidia-docker/gpgkey | sudo apt-key add -
-   curl -s -L https://nvidia.github.io/nvidia-docker/$distribution/nvidia-docker.list | \
-     sudo tee /etc/apt/sources.list.d/nvidia-docker.list
-   sudo apt-get update && sudo apt-get install -y nvidia-container-toolkit
+   sudo apt-get update && sudo apt-get install -y docker.io nvidia-container-toolkit
    sudo systemctl restart docker
    ```
 
-3. **Molmo Model** downloaded locally:
+3. Restart WSL after driver installation:
+
+   ```powershell
+   # In PowerShell (Windows)
+   wsl --shutdown
+   ```
+
+4. Verify GPU access:
+
+   ```bash
+   nvidia-smi  # Should show your GPU
+   ```
+
+### Download Molmo Model
 
    ```bash
    # Run from kanoa-mlops root
