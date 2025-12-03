@@ -19,7 +19,7 @@ This repository provides production-ready infrastructure for:
 
 #### WSL2 Users
 
-⚠️ If running on WSL2, the NVIDIA driver must be installed on **Windows** (not inside WSL).
+If running on WSL2, the NVIDIA driver must be installed on **Windows** (not inside WSL).
 See [docs/source/wsl2-gpu-setup.md](docs/source/wsl2-gpu-setup.md) for detailed setup.
 
 #### GPU Detection
