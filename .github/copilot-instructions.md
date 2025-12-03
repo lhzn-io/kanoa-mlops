@@ -10,6 +10,11 @@ For detailed persona, commands, and boundaries, consult [agents.md](../agents.md
 `kanoa-mlops` is the infrastructure companion to the `kanoa` library.
 It provides the "brawn" (compute, storage, serving) for local AI interpretation.
 
+## Setup
+
+- **Environment**: Always activate the environment with `conda activate kanoa-mlops` before running commands.
+- **Terminal**: When running commands, ensure you are in the `kanoa-mlops` conda environment. If a new terminal is opened, run `conda activate kanoa-mlops` immediately.
+
 ## Core Technologies
 
 - **Containerization**: Docker, Docker Compose

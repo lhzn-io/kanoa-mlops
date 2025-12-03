@@ -57,23 +57,38 @@ sudo systemctl restart docker
 
 ## Quick Start
 
+### Molmo (Port 8000)
+
 ```bash
-# Start the server
-docker-compose up -d
+# Start Molmo server
+docker-compose -f docker-compose.molmo.yml up -d
 
 # Check logs
-docker-compose logs -f
+docker-compose -f docker-compose.molmo.yml logs -f
+```
 
-# Test the server
-curl http://localhost:8000/v1/models
+### Gemma 3 (Port 8001)
 
-# Stop the server
-docker-compose down
+```bash
+# Start Gemma server
+docker-compose -f docker-compose.gemma.yml up -d
+
+# Check logs
+docker-compose -f docker-compose.gemma.yml logs -f
+```
+
+### Stopping Servers
+
+```bash
+docker-compose -f docker-compose.molmo.yml down
+docker-compose -f docker-compose.gemma.yml down
 ```
 
 ## Configuration
 
 ### Environment Variables
+
+### Environment Variables (Common)
 
 Create a `.env` file in this directory:
 

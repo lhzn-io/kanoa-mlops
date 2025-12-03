@@ -67,6 +67,9 @@ resource "google_compute_instance" "vllm_server" {
     ]
   }
 
+  # Attach resource policies (e.g. schedule)
+  resource_policies = var.enable_schedule ? [google_compute_resource_policy.schedule[0].self_link] : []
+
   lifecycle {
     ignore_changes = [
       # Ignore changes to metadata that may be modified at runtime
@@ -149,10 +152,5 @@ resource "google_compute_resource_policy" "schedule" {
   }
 }
 
-resource "google_compute_instance_resource_policy_attachment" "schedule" {
-  count = var.enable_schedule ? 1 : 0
-
-  name     = google_compute_resource_policy.schedule[0].name
-  instance = google_compute_instance.vllm_server.name
-  zone     = var.zone
-}
+# Attach schedule directly in instance resource via resource_policies
+# (google_compute_instance_resource_policy_attachment is not a valid resource)

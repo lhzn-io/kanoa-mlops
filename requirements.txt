@@ -7,8 +7,8 @@
 #
 # This uses editable local kanoa instead of the git URL below.
 
-# kanoa library (git URL for CI/users, PyPI once published)
-kanoa[gemini,notebook] @ git+https://github.com/lhzn-io/kanoa.git@main
+# kanoa library (PyPI)
+kanoa[gemini,notebook]==0.1.1
 
 requests>=2.28.0
 jupyter>=1.0.0
@@ -16,3 +16,9 @@ ipywidgets>=8.0.0
 matplotlib>=3.7.0
 pandas>=2.0.0
 numpy>=1.24.0
+
+# GPU support
+torch>=2.0.0  # PyTorch with CUDA support (auto-detects CUDA)
+nvidia-ml-py3>=7.352.0  # Python bindings for NVIDIA Management Library
+gputil>=1.4.0  # GPU monitoring utilities
+vllm>=0.6.3  # Local LLM serving (OpenAI compatible)

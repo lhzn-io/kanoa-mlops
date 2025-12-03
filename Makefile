@@ -1,7 +1,7 @@
 # kanoa-mlops Makefile
 # Infrastructure and development commands
 
-.PHONY: help setup setup-user setup-dev lint test clean
+.PHONY: help setup setup-user setup-dev lint test clean docs
 .PHONY: deploy destroy status ssh logs stop start list switch my-ip cost
 
 # =============================================================================
@@ -17,6 +17,7 @@ help:
 	@echo "  make deploy-molmo       - Deploy vLLM with Molmo-7B (~\$$0.70/hr)"
 	@echo "  make deploy-gemma3-4b   - Deploy vLLM with Gemma 3 4B"
 	@echo "  make deploy-gemma3-12b  - Deploy vLLM with Gemma 3 12B"
+	@echo "  make serve-molmo        - Serve Molmo 7B locally (native)"
 	@echo "  make destroy            - Destroy current deployment"
 	@echo "  make status             - Show deployment status"
 	@echo "  make stop               - Stop instance (save costs)"
@@ -29,6 +30,7 @@ help:
 	@echo "  make setup              - Alias for setup-dev"
 	@echo "  make lint               - Run linting checks"
 	@echo "  make test               - Run smoke tests"
+	@echo "  make gpu-probe          - Probe GPU and display metadata"
 	@echo "  make clean              - Remove temp files"
 	@echo ""
 	@echo "Utilities:"
@@ -70,8 +72,10 @@ lint:
 	@echo "Running shell linting (if installed)..."
 	-shellcheck scripts/*.sh
 	@echo "Validating notebook JSON..."
-	@python3 -c "import json; json.load(open('examples/quickstart-molmo.ipynb'))" && echo "  quickstart-molmo.ipynb: OK"
-	@python3 -c "import json; json.load(open('examples/quickstart-gemma3.ipynb'))" && echo "  quickstart-gemma3.ipynb: OK"
+	@python3 -c "import json; json.load(open('examples/quickstart-molmo-gcp.ipynb'))" && echo "  quickstart-molmo-gcp.ipynb: OK"
+	@python3 -c "import json; json.load(open('examples/quickstart-gemma3-gcp.ipynb'))" && echo "  quickstart-gemma3-gcp.ipynb: OK"
+	@python3 -c "import json; json.load(open('examples/demo-molmo-7b-egpu.ipynb'))" && echo "  demo-molmo-7b-egpu.ipynb: OK"
+	@python3 -c "import json; json.load(open('examples/demo-gemma-3-12b-egpu.ipynb'))" && echo "  demo-gemma-3-12b-egpu.ipynb: OK"
 
 test:
 	@echo "Running infrastructure validation..."
@@ -80,10 +84,22 @@ test:
 	else \
 		echo "  terraform not found - skipping"; \
 	fi
+	@echo "Running integration tests..."
+	@python3 tests/integration/test_molmo_vision.py
+
+gpu-probe:
+	@echo "Probing for NVIDIA GPUs..."
+	@nvidia-smi
 
 clean:
 	find . -type d -name "__pycache__" -exec rm -rf {} +
 	find . -type f -name "*.pyc" -delete
+	rm -rf docs/_build
+
+docs:
+	@echo "Building documentation..."
+	sphinx-build -b html docs docs/_build/html
+	@echo "Docs built in docs/_build/html"
 
 # =============================================================================
 # Infrastructure Setup
@@ -110,6 +126,21 @@ infra-setup:
 
 deploy-molmo:
 	@$(MAKE) _deploy WORKSPACE=molmo PRESET=molmo-7b
+
+serve-molmo:
+	@echo "Starting Molmo 7B server (native)..."
+	@if [ ! -d "${MOLMO_MODEL_PATH:-$(HOME)/.cache/kanoa/models/molmo}" ]; then \
+		echo "Model not found. Downloading..."; \
+		./scripts/download-models.sh molmo-7b-d; \
+	fi
+	@export MOLMO_MODEL_PATH=${MOLMO_MODEL_PATH:-$(HOME)/.cache/kanoa/models/molmo} && \
+	python3 -m vllm.entrypoints.openai.api_server \
+		--model $$MOLMO_MODEL_PATH \
+		--served-model-name molmo-7b \
+		--trust-remote-code \
+		--max-model-len 4096 \
+		--gpu-memory-utilization 0.9 \
+		--port 8000
 
 deploy-gemma3-4b:
 	@$(MAKE) _deploy WORKSPACE=gemma3-4b PRESET=gemma3-4b

@@ -26,8 +26,8 @@ log_error() {
 }
 
 check_dependencies() {
-    if ! command -v huggingface-cli &> /dev/null; then
-        log_error "huggingface-cli not found. Install with: pip install huggingface-hub"
+    if ! command -v hf &> /dev/null; then
+        log_error "hf CLI not found. Install with: pip install huggingface-hub[cli]"
         exit 1
     fi
 }
@@ -35,32 +35,25 @@ check_dependencies() {
 download_molmo() {
     local variant="$1"
     local model_id
-    local output_dir
 
     case "$variant" in
         molmo-7b-d|7b-d)
             model_id="allenai/Molmo-7B-D-0924"
-            output_dir="$MODELS_DIR/molmo"
             ;;
         molmo-7b-o|7b-o)
             model_id="allenai/Molmo-7B-O-0924"
-            output_dir="$MODELS_DIR/molmo-7b-o"
             ;;
         molmoe-1b|1b)
             model_id="allenai/MolmoE-1B-0924"
-            output_dir="$MODELS_DIR/molmoe-1b"
             ;;
         gemma-3-4b|g3-4b)
             model_id="google/gemma-3-4b-it"
-            output_dir="$MODELS_DIR/gemma-3-4b"
             ;;
         gemma-3-12b|g3-12b)
             model_id="google/gemma-3-12b-it"
-            output_dir="$MODELS_DIR/gemma-3-12b"
             ;;
         gemma-3-27b|g3-27b)
             model_id="google/gemma-3-27b-it"
-            output_dir="$MODELS_DIR/gemma-3-27b"
             ;;
         *)
             log_error "Unknown model variant: $variant"
@@ -71,19 +64,13 @@ download_molmo() {
             ;;
     esac
 
-    log_info "Downloading $model_id to $output_dir"
+    log_info "Downloading $model_id to Hugging Face cache"
     
-    mkdir -p "$output_dir"
+    hf download "$model_id"
     
-    huggingface-cli download "$model_id" \
-        --local-dir "$output_dir" \
-        --local-dir-use-symlinks False
-    
-    log_info "✓ Downloaded $model_id"
-    log_info "Model location: $output_dir"
-    log_info ""
+    log_info "[OK] Downloaded $model_id"
     log_info "To use with vLLM, set:"
-    log_info "  export MOLMO_MODEL_PATH=$output_dir"
+    log_info "  export MODEL_NAME=$model_id"
 }
 
 show_usage() {
