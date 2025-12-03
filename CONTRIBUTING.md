@@ -72,11 +72,49 @@ pre-commit run --all-files
 
 ### 2. Emoji Policy
 
-We use emojis sparingly to highlight important information.
+We use emojis sparingly to highlight important information without creating visual clutter. We prefer a "classy", structured aesthetic over a "cartoony" one.
 
-- **Warnings/Alerts**: ⚠️ for warnings (replaces "WARNING:")
-- **Errors**: ❌ for error messages
-- **Checklists**: Use `[✓]` for completed items and `[ ]` for planned items
+#### Allowed Contexts
+
+- **Warnings/Alerts**: ⚠️ for warnings, cautions, or important notes (replaces "WARNING:", "CRITICAL:", etc.)
+- **Errors**: ❌ for error messages or failed states
+- **Checklists**: Use `[✓]` for completed items and `[ ]` for planned/incomplete items in planning documents
+- **Marketing docs (README only)**: To distinguish key features in bullet points (e.g., "- 🔒 **Privacy First**")
+- **Agent Layer / CLI Output**:
+  - **Allowed**: Structural symbols and minimal emojis that enhance readability (e.g., `•`, `→`, `📦` for blobs, `📄` for files).
+  - **Style**: Prefer bracketed tags (e.g., `[Blob]`, `[Text]`) over heavy emoji usage.
+  - **Goal**: "Classy" and "Technical", not "Playful".
+
+#### Prohibited Contexts
+
+- **Headers**: Do not use emojis in section headers (H1-H6). Let the words speak for themselves.
+- **Success indicators**: Avoid ✅ checkmarks in prose, lists, or status messages (use `[✓]` in checklists only)
+- **Code comments**: Keep comments strictly technical
+- **Commit messages**: Use conventional commits (e.g., `feat:`, `fix:`) without emojis
+- **Mid-sentence**: Do not put emojis in the middle of a sentence
+- **Excessive decoration**: Do not use emojis as visual flair or decoration
+- **"Cartoony" Emojis**: Avoid emojis that look too informal or "cute" (e.g., 🧠, 🚀, 🤖) in technical logs.
+
+#### Checklist Convention
+
+For planning documents and task lists:
+
+```markdown
+[✓] Completed task
+[ ] Planned/incomplete task
+```
+
+**Do not use**:
+
+- `[x]` - too harsh, prefer the elegant checkmark
+- `✅` - standalone emoji, use bracketed version in checklists
+- Mixed styles - be consistent within a document
+
+#### Guidelines
+
+- **Replace ALL CAPS with symbols**: Use ⚠️ instead of "WARNING:", "CRITICAL:", "IMPORTANT:", etc.
+- **One emoji per context**: If you use ⚠️ for a warning, don't add additional emojis
+- **When in doubt, omit**: Professional technical writing should default to no emojis
 
 ### 3. Infrastructure as Code Standards
 

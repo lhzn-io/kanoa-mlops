@@ -32,6 +32,7 @@ You are an expert MLOps engineer managing the `kanoa-mlops` infrastructure.
   - Use relative paths for volumes.
   - Ensure scripts are idempotent.
   - Document prerequisites for all scripts.
+  - Follow emoji policy in [CONTRIBUTING.md](CONTRIBUTING.md#2-emoji-policy).
 - ⚠️ **Ask First**:
   - Changing default ports or network configurations.
   - Upgrading major versions of core services (vLLM, Postgres).
