@@ -168,17 +168,79 @@ watch -n 1 'curl -s http://localhost:8000/metrics | grep -E "(cache|memory|token
 
 Our benchmark suite automatically collects performance metrics. For GPU monitoring integration:
 
-```python
-# tests/integration/run_benchmark_suite.py includes:
-# - Per-test timing
-# - Token throughput
-# - Statistical analysis (mean, stddev, min, max)
+```bash
+# Run benchmark suite for Gemma 3 12B (3 iterations)
+cd tests/integration
+python3 run_benchmark_suite.py
 
-# Run multiple iterations to measure variance
-python3 tests/integration/run_benchmark_suite.py
+# Run benchmark suite for Molmo 7B (3 iterations)
+python3 run_benchmark_suite_molmo.py
 ```
 
-Results are saved to `benchmark_statistics.json` with full statistics.
+Each suite includes:
+
+- Per-test timing and token throughput
+- Statistical analysis (mean, stddev, min, max)
+- JSON output with full results
+
+Results are saved to:
+
+- `benchmark_statistics.json` - Gemma 3 12B results
+- `benchmark_statistics_molmo.json` - Molmo 7B results
+
+### Benchmark Results (RTX 5080 16GB eGPU)
+
+Real-world performance with 4-bit quantization + FP8 KV cache:
+
+| Model | Mean Throughput | Std Dev | Range | Relative Speed |
+| :--- | :--- | :--- | :--- | :--- |
+| **Molmo 7B** | **31.1 tok/s** | 5.9 tok/s | 24.2 - 34.5 tok/s | **3.02x faster** |
+| Gemma 3 12B | 10.3 tok/s | 3.5 tok/s | 8.1 - 14.4 tok/s | Baseline |
+
+**Per-Test Breakdown (Molmo 7B)**:
+
+- Boardwalk Photo: 29.3 ± 5.8 tok/s
+- Complex Plot: 32.7 ± 6.3 tok/s
+- Data Interpretation: 28.8 ± 8.8 tok/s
+
+**Key Observations**:
+
+1. **Molmo 7B is 3x faster** despite being smaller (7B vs 12B parameters)
+2. **Similar variance** across both models (~19-34% coefficient of variation)
+3. **First inference penalty**: Cold cache results in slower initial requests (prefix caching helps)
+4. **Task complexity matters**: Data interpretation shows highest variance (18.8-35.4 tok/s)
+
+### Benchmark Methodology
+
+Each benchmark suite runs 3 iterations of:
+
+1. **API Health Check**: Verify server responsiveness
+2. **Vision Tests** (Molmo):
+   - Real-world photo interpretation
+   - Complex multi-panel matplotlib plots
+   - Data visualization analysis
+3. **Vision + Text Tests** (Gemma 3):
+   - Chart interpretation
+   - Code generation from visual input
+   - Reasoning tasks
+   - Structured output (JSON)
+   - Multi-turn conversations
+
+**Metrics Collected**:
+
+- Total tokens generated
+- Total duration (seconds)
+- Tokens per second (throughput)
+- Per-test timing and variance
+
+**Hardware Configuration**:
+
+- GPU: NVIDIA RTX 5080 16GB (eGPU via Thunderbolt 5)
+- Quantization: 4-bit BitsAndBytes
+- KV Cache: FP8 dtype
+- GPU Memory Utilization: 80%
+- Max Sequences: 5
+- Chunked Prefill: Enabled (2048 tokens)
 
 ## References
 

@@ -14,6 +14,7 @@ kanoa-mlops Documentation
    :caption: Development
 
    gpu-monitoring
+   performance-analysis
 
 Indices and tables
 ==================

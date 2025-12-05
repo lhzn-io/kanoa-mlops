@@ -1,0 +1,138 @@
+{
+  "num_runs": 3,
+  "timestamp": "2025-12-05T11:38:20",
+  "model": "allenai/Molmo-7B-D-0924",
+  "platform": "RTX 5080 16GB (eGPU)",
+  "statistics": {
+    "overall": {
+      "mean_throughput": 31.054956870770454,
+      "std_throughput": 5.929926206791672,
+      "min_throughput": 24.207922591282983,
+      "max_throughput": 34.52962085437842
+    },
+    "per_test": {
+      "Boardwalk Photo": {
+        "mean": 29.290273758236843,
+        "std": 5.775450145632799,
+        "min": 24.02729340910999,
+        "max": 35.468819439585914
+      },
+      "Complex Plot": {
+        "mean": 32.69676118498373,
+        "std": 6.296823171193797,
+        "min": 25.744971025503045,
+        "max": 38.017769332585694
+      },
+      "Data Interpretation": {
+        "mean": 28.810161726743644,
+        "std": 8.78182078277875,
+        "min": 18.83180843212659,
+        "max": 35.362900143442346
+      }
+    }
+  },
+  "raw_results": [
+    {
+      "timestamp": "2025-12-05T11:37:43.211058",
+      "model": "allenai/Molmo-7B-D-0924",
+      "platform": "RTX 5080 16GB (eGPU)",
+      "summary": {
+        "total_tests": 3,
+        "total_tokens": 501,
+        "total_duration_s": 20.695703983306885,
+        "avg_tokens_per_second": 24.207922591282983
+      },
+      "tests": [
+        {
+          "test_name": "Boardwalk Photo",
+          "duration_s": 5.909945726394653,
+          "tokens_generated": 142,
+          "tokens_per_second": 24.02729340910999,
+          "prompt_tokens": 1207
+        },
+        {
+          "test_name": "Complex Plot",
+          "duration_s": 11.652761220932007,
+          "tokens_generated": 300,
+          "tokens_per_second": 25.744971025503045,
+          "prompt_tokens": 1214
+        },
+        {
+          "test_name": "Data Interpretation",
+          "duration_s": 3.1329970359802246,
+          "tokens_generated": 59,
+          "tokens_per_second": 18.83180843212659,
+          "prompt_tokens": 1217
+        }
+      ]
+    },
+    {
+      "timestamp": "2025-12-05T11:38:02.029377",
+      "model": "allenai/Molmo-7B-D-0924",
+      "platform": "RTX 5080 16GB (eGPU)",
+      "summary": {
+        "total_tests": 3,
+        "total_tokens": 521,
+        "total_duration_s": 15.133327007293701,
+        "avg_tokens_per_second": 34.42732716664996
+      },
+      "tests": [
+        {
+          "test_name": "Boardwalk Photo",
+          "duration_s": 4.933971405029297,
+          "tokens_generated": 140,
+          "tokens_per_second": 28.374708426014625,
+          "prompt_tokens": 1207
+        },
+        {
+          "test_name": "Complex Plot",
+          "duration_s": 7.65431547164917,
+          "tokens_generated": 291,
+          "tokens_per_second": 38.017769332585694,
+          "prompt_tokens": 1214
+        },
+        {
+          "test_name": "Data Interpretation",
+          "duration_s": 2.5450401306152344,
+          "tokens_generated": 90,
+          "tokens_per_second": 35.362900143442346,
+          "prompt_tokens": 1217
+        }
+      ]
+    },
+    {
+      "timestamp": "2025-12-05T11:38:19.997360",
+      "model": "allenai/Molmo-7B-D-0924",
+      "platform": "RTX 5080 16GB (eGPU)",
+      "summary": {
+        "total_tests": 3,
+        "total_tokens": 481,
+        "total_duration_s": 13.930068969726562,
+        "avg_tokens_per_second": 34.52962085437842
+      },
+      "tests": [
+        {
+          "test_name": "Boardwalk Photo",
+          "duration_s": 4.229066610336304,
+          "tokens_generated": 150,
+          "tokens_per_second": 35.468819439585914,
+          "prompt_tokens": 1207
+        },
+        {
+          "test_name": "Complex Plot",
+          "duration_s": 8.739337921142578,
+          "tokens_generated": 300,
+          "tokens_per_second": 34.32754319686246,
+          "prompt_tokens": 1214
+        },
+        {
+          "test_name": "Data Interpretation",
+          "duration_s": 0.9616644382476807,
+          "tokens_generated": 31,
+          "tokens_per_second": 32.23577660466199,
+          "prompt_tokens": 1217
+        }
+      ]
+    }
+  ]
+}

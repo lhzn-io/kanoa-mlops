@@ -145,8 +145,9 @@ See [docs/source/gcp-setup-guide.md](docs/source/gcp-setup-guide.md) for full se
 
 ### Vision Language Models (2025-2026)
 
-- **Molmo (7B)**: Excellent alternative for specific vision tasks. (Verified)
-- **Gemma 3 (4B, 12B, 27B)**: Google's latest open-weight multimodal models. (Testing in progress)
+- **Molmo (7B)**: Excellent for vision tasks. 31.1 tok/s on RTX 5080. (Verified)
+- **Gemma 3 (12B)**: Strong text reasoning, vision support. 10.3 tok/s on RTX 5080. (Verified)
+- **Gemma 3 (4B, 27B)**: Additional model sizes. (Planned)
 
 ### Text-Only Models
 
@@ -170,6 +171,26 @@ See [docs/source/gcp-setup-guide.md](docs/source/gcp-setup-guide.md) for full se
 
 ## Performance
 
+### Benchmark Results (RTX 5080 16GB eGPU)
+
+Real-world performance with 4-bit quantization + FP8 KV cache:
+
+| Model | Mean Throughput | Variance | Notes |
+| :--- | :--- | :--- | :--- |
+| **Molmo 7B** | **31.1 tok/s** | ±5.9 tok/s | Best for vision tasks, 3x faster |
+| Gemma 3 12B | 10.3 tok/s | ±3.5 tok/s | More stable, better text reasoning |
+
+**Key Findings**:
+
+- **Molmo 7B** delivers 3x higher throughput than Gemma 3 12B despite being smaller
+- Both models show similar variance (~19-34% coefficient of variation)
+- First inference is slower due to cold cache; subsequent requests benefit from prefix caching
+- Performance varies by task complexity (18-38 tok/s range observed)
+
+See [docs/source/gpu-monitoring.md](docs/source/gpu-monitoring.md) for benchmarking methodology and detailed performance analysis.
+
+### vLLM Advantages
+
 vLLM provides significantly faster inference compared to direct transformers:
 
 - **Throughput**: 10-20x improvement with batching
@@ -180,13 +201,13 @@ vLLM provides significantly faster inference compared to direct transformers:
 
 We are actively testing and optimizing `kanoa-mlops` for various edge AI hardware platforms.
 
-| Hardware Platform | GPU Memory | Target Models | Status |
-| :--- | :--- | :--- | :--- |
-| **NVIDIA RTX 5080 (eGPU)** | 16GB | Molmo 7B (4-bit) | [✓] Verified |
-| **NVIDIA RTX 5080 (eGPU)** | 16GB | Gemma 3 12B (4-bit) | [~] Testing |
-| **GCP L4 GPU** | 24GB | Molmo 7B, Gemma 3 12B | [ ] Planned |
-| **NVIDIA Jetson Thor** | TBD | Gemma 3 27B | [ ] Planned |
-| **NVIDIA Orin AGX** | 32GB / 64GB | Molmo 7B | [ ] Planned |
+| Hardware Platform | GPU Memory | Target Models | Performance | Status |
+| :--- | :--- | :--- | :--- | :--- |
+| **NVIDIA RTX 5080 (eGPU)** | 16GB | Molmo 7B (4-bit) | 31.1 tok/s | [✓] Verified |
+| **NVIDIA RTX 5080 (eGPU)** | 16GB | Gemma 3 12B (4-bit) | 10.3 tok/s | [✓] Verified |
+| **GCP L4 GPU** | 24GB | Molmo 7B, Gemma 3 12B | TBD | [ ] Planned |
+| **NVIDIA Jetson Thor** | TBD | Gemma 3 27B | TBD | [ ] Planned |
+| **NVIDIA Orin AGX** | 32GB / 64GB | Molmo 7B | TBD | [ ] Planned |
 
 ## Future Roadmap
 
