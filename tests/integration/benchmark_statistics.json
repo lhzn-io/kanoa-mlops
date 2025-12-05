@@ -1,0 +1,267 @@
+{
+  "num_runs": 3,
+  "timestamp": "2025-12-05T10:28:34",
+  "model": "gemma-3-12b",
+  "platform": {
+    "system": "Linux",
+    "machine": "x86_64",
+    "python_version": "3.12.9",
+    "gpu": "NVIDIA RTX 5080 16GB",
+    "driver": "unknown"
+  },
+  "statistics": {
+    "overall": {
+      "mean_throughput": 10.272021363110493,
+      "std_throughput": 3.5339990559650687,
+      "min_throughput": 8.106156870937443,
+      "max_throughput": 14.350103451645635
+    },
+    "per_test": {
+      "Vision - Boardwalk": {
+        "mean": 2.189267422834283,
+        "std": 0.25823479249216225,
+        "min": 1.9608058229655079,
+        "max": 2.4694475556763984
+      },
+      "Vision - Chart": {
+        "mean": 13.586139142080734,
+        "std": 0.954610222565103,
+        "min": 12.518471131957599,
+        "max": 14.357342989678319
+      },
+      "Basic Chat": {
+        "mean": 12.580167497145219,
+        "std": 1.4450866252502963,
+        "min": 10.94088437883288,
+        "max": 13.669695139657723
+      },
+      "Code Generation": {
+        "mean": 15.970585893753434,
+        "std": 2.9443452006327075,
+        "min": 14.269338476757254,
+        "max": 19.370422535709952
+      },
+      "Reasoning": {
+        "mean": 2.2613145329010997,
+        "std": 2.25745644197671,
+        "min": 0.8356321772415937,
+        "max": 4.864045113048623
+      },
+      "Structured Output": {
+        "mean": 25.146050218370483,
+        "std": 17.975331823435077,
+        "min": 13.515892699045244,
+        "max": 45.8496188685277
+      },
+      "Multi-turn": {
+        "mean": 0.17062483468819453,
+        "std": 0.15092701795314747,
+        "min": 0.08198343422473454,
+        "max": 0.34489164429276065
+      }
+    }
+  },
+  "raw_results": [
+    {
+      "timestamp": "2025-12-05T10:20:58.564336",
+      "model": "gemma-3-12b",
+      "platform": {
+        "system": "Linux",
+        "machine": "x86_64",
+        "python_version": "3.12.9",
+        "gpu": "NVIDIA RTX 5080 16GB",
+        "driver": "unknown"
+      },
+      "summary": {
+        "total_tokens": 804,
+        "total_duration_s": 280.5189311504364,
+        "avg_tokens_per_second": 8.106156870937443
+      },
+      "tests": [
+        {
+          "test_name": "Vision - Boardwalk",
+          "duration_s": 93.5651113986969,
+          "tokens_generated": 200,
+          "tokens_per_second": 2.137548889860943,
+          "prompt_tokens": 275
+        },
+        {
+          "test_name": "Vision - Chart",
+          "duration_s": 6.8698484897613525,
+          "tokens_generated": 86,
+          "tokens_per_second": 12.518471131957599,
+          "prompt_tokens": 281
+        },
+        {
+          "test_name": "Basic Chat",
+          "duration_s": 0.7616190910339355,
+          "tokens_generated": 10,
+          "tokens_per_second": 13.129922972945053,
+          "prompt_tokens": 16
+        },
+        {
+          "test_name": "Code Generation",
+          "duration_s": 21.02018427848816,
+          "tokens_generated": 300,
+          "tokens_per_second": 14.271996668793095,
+          "prompt_tokens": 25
+        },
+        {
+          "test_name": "Reasoning",
+          "duration_s": 66.4043505191803,
+          "tokens_generated": 72,
+          "tokens_per_second": 1.0842663084130828,
+          "prompt_tokens": 40
+        },
+        {
+          "test_name": "Structured Output",
+          "duration_s": 9.54431962966919,
+          "tokens_generated": 129,
+          "tokens_per_second": 13.515892699045244,
+          "prompt_tokens": 42
+        },
+        {
+          "test_name": "Multi-turn",
+          "duration_s": 82.35349774360657,
+          "tokens_generated": 7,
+          "tokens_per_second": 0.0849994255470884,
+          "prompt_tokens": 38
+        }
+      ]
+    },
+    {
+      "timestamp": "2025-12-05T10:26:11.954742",
+      "model": "gemma-3-12b",
+      "platform": {
+        "system": "Linux",
+        "machine": "x86_64",
+        "python_version": "3.12.9",
+        "gpu": "NVIDIA RTX 5080 16GB",
+        "driver": "unknown"
+      },
+      "summary": {
+        "total_tokens": 819,
+        "total_duration_s": 310.55805492401123,
+        "avg_tokens_per_second": 8.3598037667484
+      },
+      "tests": [
+        {
+          "test_name": "Vision - Boardwalk",
+          "duration_s": 101.99888110160828,
+          "tokens_generated": 200,
+          "tokens_per_second": 1.9608058229655079,
+          "prompt_tokens": 275
+        },
+        {
+          "test_name": "Vision - Chart",
+          "duration_s": 7.174029350280762,
+          "tokens_generated": 103,
+          "tokens_per_second": 14.357342989678319,
+          "prompt_tokens": 281
+        },
+        {
+          "test_name": "Basic Chat",
+          "duration_s": 0.9140028953552246,
+          "tokens_generated": 10,
+          "tokens_per_second": 10.94088437883288,
+          "prompt_tokens": 16
+        },
+        {
+          "test_name": "Code Generation",
+          "duration_s": 21.024100065231323,
+          "tokens_generated": 300,
+          "tokens_per_second": 14.269338476757254,
+          "prompt_tokens": 25
+        },
+        {
+          "test_name": "Reasoning",
+          "duration_s": 86.16231155395508,
+          "tokens_generated": 72,
+          "tokens_per_second": 0.8356321772415937,
+          "prompt_tokens": 40
+        },
+        {
+          "test_name": "Structured Output",
+          "duration_s": 7.901627063751221,
+          "tokens_generated": 127,
+          "tokens_per_second": 16.07263908753851,
+          "prompt_tokens": 42
+        },
+        {
+          "test_name": "Multi-turn",
+          "duration_s": 85.38310289382935,
+          "tokens_generated": 7,
+          "tokens_per_second": 0.08198343422473454,
+          "prompt_tokens": 38
+        }
+      ]
+    },
+    {
+      "timestamp": "2025-12-05T10:28:34.348316",
+      "model": "gemma-3-12b",
+      "platform": {
+        "system": "Linux",
+        "machine": "x86_64",
+        "python_version": "3.12.9",
+        "gpu": "NVIDIA RTX 5080 16GB",
+        "driver": "unknown"
+      },
+      "summary": {
+        "total_tokens": 779,
+        "total_duration_s": 139.61555194854736,
+        "avg_tokens_per_second": 14.350103451645635
+      },
+      "tests": [
+        {
+          "test_name": "Vision - Boardwalk",
+          "duration_s": 80.98977422714233,
+          "tokens_generated": 200,
+          "tokens_per_second": 2.4694475556763984,
+          "prompt_tokens": 275
+        },
+        {
+          "test_name": "Vision - Chart",
+          "duration_s": 4.538053750991821,
+          "tokens_generated": 63,
+          "tokens_per_second": 13.882603304606285,
+          "prompt_tokens": 281
+        },
+        {
+          "test_name": "Basic Chat",
+          "duration_s": 0.7315452098846436,
+          "tokens_generated": 10,
+          "tokens_per_second": 13.669695139657723,
+          "prompt_tokens": 16
+        },
+        {
+          "test_name": "Code Generation",
+          "duration_s": 15.487529993057251,
+          "tokens_generated": 300,
+          "tokens_per_second": 19.370422535709952,
+          "prompt_tokens": 25
+        },
+        {
+          "test_name": "Reasoning",
+          "duration_s": 14.802494287490845,
+          "tokens_generated": 72,
+          "tokens_per_second": 4.864045113048623,
+          "prompt_tokens": 40
+        },
+        {
+          "test_name": "Structured Output",
+          "duration_s": 2.7699248790740967,
+          "tokens_generated": 127,
+          "tokens_per_second": 45.8496188685277,
+          "prompt_tokens": 42
+        },
+        {
+          "test_name": "Multi-turn",
+          "duration_s": 20.296229600906372,
+          "tokens_generated": 7,
+          "tokens_per_second": 0.34489164429276065,
+          "prompt_tokens": 38
+        }
+      ]
+    }
+  ]
+}

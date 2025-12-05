@@ -3,7 +3,7 @@ services:
     image: vllm/vllm-openai:latest
     container_name: kanoa-vllm-gemma
     ports:
-      - "8001:8000" # Port 8001 to avoid conflict with Molmo
+      - "8000:8000" # Standard vLLM port (use 8001:8000 if running alongside Molmo)
     volumes:
       - ${HF_HOME:-~/.cache/huggingface}:/root/.cache/huggingface:rw
       - ${MODELS_DIR:-~/.cache/kanoa/models}:/models:ro
