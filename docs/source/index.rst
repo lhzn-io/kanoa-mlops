@@ -9,6 +9,12 @@ kanoa-mlops Documentation
    wsl2-gpu-setup
    egpu-setup-guide
 
+.. toctree::
+   :maxdepth: 2
+   :caption: Development
+
+   gpu-monitoring
+
 Indices and tables
 ==================
 

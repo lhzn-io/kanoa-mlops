@@ -195,6 +195,28 @@ We are actively testing and optimizing `kanoa-mlops` for various edge AI hardwar
 - **Ollama Integration**: Evaluate Ollama as an alternative backend for easier local setup (CPU/Apple Silicon support).
 - **Production Hardening**: Kubernetes manifests and Helm charts.
 
+## GPU Monitoring
+
+Real-time GPU monitoring tools are included in the development environment:
+
+```bash
+# Interactive htop-style GPU monitor
+nvitop
+
+# Quick snapshot
+gpustat --color
+
+# Watch mode (updates every 1s)
+watch -n 1 gpustat --color
+```
+
+See [docs/source/gpu-monitoring.md](docs/source/gpu-monitoring.md) for detailed monitoring guides, including:
+
+- vLLM Prometheus metrics (`/metrics` endpoint)
+- Prefix cache hit rate monitoring
+- Performance troubleshooting
+- Benchmark analysis
+
 ## Contributing
 
 See `kanoa` repository for contribution guidelines.
