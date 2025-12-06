@@ -1,0 +1,98 @@
+# Prometheus configuration for kanoa GPU monitoring
+# Scrapes metrics from local vLLM server and can be extended for remote endpoints
+
+global:
+  # How frequently to scrape targets by default
+  scrape_interval: 15s
+  # How long until a scrape request times out
+  scrape_timeout: 10s
+  # How frequently to evaluate rules
+  evaluation_interval: 15s
+
+  # Attach these labels to any time series or alerts
+  external_labels:
+    cluster: 'local-dev'
+    environment: 'development'
+
+# Alertmanager configuration (optional - uncomment if needed)
+# alerting:
+#   alertmanagers:
+#     - static_configs:
+#         - targets:
+#           - alertmanager:9093
+
+# Load rules once and periodically evaluate them
+# rule_files:
+#   - "rules/*.yml"
+
+# Scrape configurations
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+        labels:
+          instance: 'prometheus'
+
+  # Local vLLM server metrics
+  # vLLM exposes Prometheus metrics at /metrics endpoint
+  - job_name: 'vllm-local'
+    scrape_interval: 15s
+    scrape_timeout: 10s
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['host.docker.internal:8000']
+        labels:
+          instance: 'vllm-local'
+          model: 'local-inference'
+          environment: 'development'
+
+    # Optional: Only scrape if vLLM is running
+    # Prometheus will mark target as down if unreachable
+
+  # Example: Add GCP remote endpoint (commented out - ready for future use)
+  # - job_name: 'vllm-gcp'
+  #   scrape_interval: 30s
+  #   scrape_timeout: 15s
+  #   metrics_path: '/metrics'
+  #   static_configs:
+  #     - targets: ['<GCP_EXTERNAL_IP>:8000']
+  #       labels:
+  #         instance: 'vllm-gcp'
+  #         cloud: 'gcp'
+  #         region: 'us-central1'
+  #         model: 'gemma-3-12b'
+  #         environment: 'production'
+  #
+  #   # Optional: Add authentication if needed
+  #   # basic_auth:
+  #   #   username: 'prometheus'
+  #   #   password_file: '/etc/prometheus/secrets/gcp_password'
+  #
+  #   # Optional: Use TLS for secure connection
+  #   # tls_config:
+  #   #   ca_file: '/etc/prometheus/certs/ca.crt'
+  #   #   cert_file: '/etc/prometheus/certs/client.crt'
+  #   #   key_file: '/etc/prometheus/certs/client.key'
+
+  # Example: Add multiple remote endpoints
+  # - job_name: 'vllm-azure'
+  #   static_configs:
+  #     - targets: ['<AZURE_ENDPOINT>:8000']
+  #       labels:
+  #         instance: 'vllm-azure'
+  #         cloud: 'azure'
+  #         environment: 'staging'
+
+  # Optional: Node exporter for system metrics (CPU, memory, disk)
+  # Uncomment if you want to monitor host system alongside GPU
+  # - job_name: 'node-exporter'
+  #   static_configs:
+  #     - targets: ['host.docker.internal:9100']
+  #       labels:
+  #         instance: 'local-host'
+
+# Storage configuration (already set via CLI flags in docker-compose)
+# storage:
+#   tsdb:
+#     retention.time: 30d

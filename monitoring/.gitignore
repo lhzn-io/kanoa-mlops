@@ -1,0 +1,7 @@
+# Ignore any local certificate files
+prometheus/certs/
+
+# Ignore any local secrets
+*.key
+*.pem
+*.password

@@ -90,30 +90,60 @@ When running performance benchmarks, monitor these key metrics:
 - **RTX 5080**: Up to 360W max
 - **Typical load**: 100-300W during inference
 
-## vLLM-Specific Metrics
+## Prometheus & Grafana Monitoring Stack
 
-For more detailed performance analysis, vLLM exposes Prometheus metrics at `/metrics`:
+For production-grade monitoring with dashboards and historical metrics, use the included Prometheus + Grafana stack.
 
-### Key Metrics to Monitor:
+### Quick Start
 
-```python
-import requests
+```bash
+# From kanoa-mlops root directory
+docker compose -f docker-compose.monitoring.yml up -d
+```
 
-metrics = requests.get("http://localhost:8000/metrics").text
+**Access:**
 
-# Prefix cache hit rate (higher is better)
-# vllm:prefix_cache_hits / vllm:prefix_cache_queries
+- Grafana: <http://localhost:3000> (admin/admin)
+- Prometheus: <http://localhost:9090>
 
-# KV cache utilization (target: 85-95%)
-# vllm:gpu_cache_usage_perc
+The stack includes:
 
-# Latency (Time to First Token)
-# vllm:time_to_first_token_seconds
+- Auto-provisioned Grafana dashboards for vLLM metrics
+- 30-day metric retention
+- Real-time GPU cache, throughput, and latency monitoring
+- Support for remote endpoints (GCP, Azure, on-prem)
+
+For full documentation, see the [Monitoring Stack README](../../monitoring/README.md).
+
+### vLLM Metrics Reference
+
+vLLM exposes Prometheus metrics at `/metrics`:
+
+**Key Metrics:**
+
+| Metric | Type | Description |
+|--------|------|-------------|
+| `vllm:gpu_cache_usage_perc` | Gauge | GPU KV cache utilization (0-100%) |
+| `vllm:num_requests_running` | Gauge | Currently executing requests |
+| `vllm:avg_generation_throughput_toks_per_s` | Gauge | Output token speed |
+| `vllm:time_to_first_token_seconds` | Gauge | Latency to first token |
+| `vllm:num_preemptions_total` | Counter | Total cache evictions |
+
+**Quick Check:**
+
+```bash
+# View raw metrics
+curl http://localhost:8000/metrics
+
+# Watch cache usage
+watch -n 1 'curl -s http://localhost:8000/metrics | grep cache_usage_perc'
 ```
 
 ### Example: Calculate Cache Hit Rate
 
 ```python
+import requests
+
 def get_cache_hit_rate():
     metrics = requests.get("http://localhost:8000/metrics").text
 
