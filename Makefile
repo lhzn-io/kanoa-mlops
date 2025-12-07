@@ -140,7 +140,20 @@ serve-molmo:
 		--trust-remote-code \
 		--max-model-len 4096 \
 		--gpu-memory-utilization 0.9 \
+		--gpu-memory-utilization 0.9 \
 		--port 8000
+
+serve-ollama:
+	@echo "Starting Ollama server..."
+	@docker compose -f docker/ollama/docker-compose.ollama.yml up -d
+	@echo "Ollama is running at http://localhost:11434"
+	@echo "To pull a model: docker compose -f docker/ollama/docker-compose.ollama.yml exec ollama ollama pull <model>"
+	@echo "mounted HF cache: ~/.cache/huggingface -> /root/.cache/huggingface (ro)"
+
+test-ollama:
+	@echo "Running Ollama integration tests..."
+	@python3 tests/integration/test_ollama_gemma3.py
+
 
 deploy-gemma3-4b:
 	@$(MAKE) _deploy WORKSPACE=gemma3-4b PRESET=gemma3-4b

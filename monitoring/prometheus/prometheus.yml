@@ -84,6 +84,16 @@ scrape_configs:
   #         cloud: 'azure'
   #         environment: 'staging'
 
+  # NVIDIA GPU metrics exporter
+  - job_name: 'nvidia-dcgm'
+    scrape_interval: 5s
+    scrape_timeout: 5s
+    static_configs:
+      - targets: ['nvidia-dcgm-exporter:9400']
+        labels:
+          instance: 'local-gpu'
+          gpu_type: 'rtx-5080'
+
   # Optional: Node exporter for system metrics (CPU, memory, disk)
   # Uncomment if you want to monitor host system alongside GPU
   # - job_name: 'node-exporter'

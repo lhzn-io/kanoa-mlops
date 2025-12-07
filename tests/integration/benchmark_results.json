@@ -1,33 +1,33 @@
 {
-  "timestamp": "2025-12-05T11:38:19.997360",
+  "timestamp": "2025-12-05T22:08:43.489486",
   "model": "allenai/Molmo-7B-D-0924",
   "platform": "RTX 5080 16GB (eGPU)",
   "summary": {
     "total_tests": 3,
-    "total_tokens": 481,
-    "total_duration_s": 13.930068969726562,
-    "avg_tokens_per_second": 34.52962085437842
+    "total_tokens": 479,
+    "total_duration_s": 10.59774661064148,
+    "avg_tokens_per_second": 45.198287673628975
   },
   "tests": [
     {
       "test_name": "Boardwalk Photo",
-      "duration_s": 4.229066610336304,
-      "tokens_generated": 150,
-      "tokens_per_second": 35.468819439585914,
+      "duration_s": 3.8800957202911377,
+      "tokens_generated": 148,
+      "tokens_per_second": 38.14338889270882,
       "prompt_tokens": 1207
     },
     {
       "test_name": "Complex Plot",
-      "duration_s": 8.739337921142578,
+      "duration_s": 6.0735766887664795,
       "tokens_generated": 300,
-      "tokens_per_second": 34.32754319686246,
+      "tokens_per_second": 49.39428863306719,
       "prompt_tokens": 1214
     },
     {
       "test_name": "Data Interpretation",
-      "duration_s": 0.9616644382476807,
+      "duration_s": 0.6440742015838623,
       "tokens_generated": 31,
-      "tokens_per_second": 32.23577660466199,
+      "tokens_per_second": 48.131100304540944,
       "prompt_tokens": 1217
     }
   ]

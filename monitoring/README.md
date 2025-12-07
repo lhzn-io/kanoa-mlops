@@ -6,8 +6,9 @@ Prometheus + Grafana stack for monitoring vLLM GPU utilization and inference met
 
 This monitoring stack provides:
 
-- **Prometheus**: Time-series metrics collection from vLLM `/metrics` endpoint
+- **Prometheus**: Time-series metrics collection from vLLM `/metrics` endpoint and GPU hardware
 - **Grafana**: Visualization dashboards for GPU metrics, request rates, and throughput
+- **NVIDIA DCGM Exporter**: Official GPU hardware monitoring (temperature, power, memory, utilization)
 - **Persistent Storage**: Data survives container restarts
 - **Extensible**: Ready to add remote GCP/Azure endpoints
 
@@ -18,10 +19,14 @@ graph TD
     A["vLLM Server<br/>(port 8000)"]
     B["Prometheus<br/>(port 9090)"]
     C["Grafana<br/>(port 3000)"]
-    
-    A -->|/metrics endpoint<br/>Prometheus format| B
-    B -->|scrapes every 15s<br/>stores 30 days| C
-    C -->|queries Prometheus<br/>displays dashboards| D["📊 Dashboards"]
+    D["NVIDIA DCGM Exporter<br/>(port 9400)"]
+    E["RTX 5080 GPU"]
+
+    A -->|/metrics endpoint<br/>vLLM metrics| B
+    D -->|GPU hardware metrics<br/>temperature, power, memory| B
+    E -->|GPU telemetry| D
+    B -->|scrapes every 5-15s<br/>stores 30 days| C
+    C -->|queries Prometheus<br/>displays dashboards| F["📊 Dashboards"]
 ```
 
 The monitoring stack runs independently from vLLM, so it survives vLLM restarts.
@@ -88,19 +93,46 @@ Within 15 seconds, Prometheus will start scraping metrics and Grafana will displ
 
 ## Available Dashboards
 
-### vLLM GPU Metrics
+### vLLM GPU Metrics - Enhanced (Recommended)
 
-Pre-built dashboard showing:
+Comprehensive dashboard with 4 sections:
 
-- **GPU KV Cache Usage**: Current cache utilization (gauge)
-- **Request Rate**: Running and waiting requests per second
-- **Active Requests**: Number of currently running requests
-- **Token Throughput**: Generation and prompt processing speed (tok/s)
-- **Latency Metrics**: Time to first token, time per output token
-- **Cache Utilization**: GPU and CPU cache usage over time
-- **Request Preemptions**: Total preemptions and rate
+**Token Odometers** (4 panels):
+
+- Total Prompt Tokens (lifetime cumulative)
+- Total Generated Tokens (lifetime cumulative)
+- Total Requests served
+- Average Tokens per Request
+
+**Latency Metrics** (2 panels):
+
+- Time to First Token percentiles (p50, p90, p95, p99)
+- Time per Output Token percentiles (p50, p90, p95, p99)
+
+**GPU Hardware Metrics** (4 panels via NVIDIA DCGM):
+
+- GPU Temperature (°C) with threshold alerts
+- GPU Power Usage (W) with load indicators
+- GPU Utilization (%) - compute usage
+- GPU Memory Used (MB) - VRAM consumption
+
+**vLLM Performance** (3 panels):
+
+- KV Cache Usage (%)
+- Request Queue (running vs waiting)
+- Token Throughput (tokens/second)
 
 The dashboard auto-refreshes every 5 seconds.
+
+### vLLM GPU Metrics (Basic)
+
+Simpler dashboard with core vLLM metrics:
+
+- GPU KV Cache Usage
+- Request Rate and Active Requests
+- Token Throughput
+- Cache Utilization over time
+- Request Preemptions
 
 ## Accessing Services
 

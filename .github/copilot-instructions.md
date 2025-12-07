@@ -24,28 +24,14 @@ It provides the "brawn" (compute, storage, serving) for local AI interpretation.
 
 ## Coding Guidelines
 
-### Infrastructure as Code (Docker)
+For complete style guidelines, naming conventions, and emoji policy, see [CONTRIBUTING.md](../CONTRIBUTING.md).
 
-- **Explicit Versions**: Always pin Docker image tags (e.g., `vllm/vllm-openai:v0.6.3.post1`).
-- **Volume Mapping**: Use relative paths for volumes (`./data:/data`).
-- **GPU Support**: Ensure `deploy: resources: reservations: devices: - driver: nvidia` is present for GPU services.
-
-### Scripts (Bash/Python)
-
-- **Idempotency**: Scripts should be safe to run multiple times
-  (check if dir exists before creating).
-- **Error Handling**: Use `set -e` in bash scripts.
-- **Environment Variables**: Use `.env` files for secrets;
-  providing `env.example` is mandatory.
-
-### Documentation
-
-- **Prerequisites**: Clearly state hardware requirements
-  (e.g., "Requires NVIDIA GPU with 24GB VRAM").
-- **Quickstarts**: Provide copy-pasteable commands for "0 to 1" setup.
-- **Emojis**: Use sparingly. ⚠️ for warnings (not "WARNING:"), ❌ for errors.
-  Avoid ✅ checkmarks in prose.
-  For checklists in planning docs, use `[✓]` for completed items and `[ ]` for planned items.
+**Quick Reference**:
+- **Docker**: Pin image versions (e.g., `vllm/vllm-openai:v0.6.3.post1`)
+- **Scripts**: Must be idempotent, use `set -e` in bash
+- **Secrets**: Never commit `.env` files, provide `env.example`
+- **Documentation**: State hardware requirements clearly
+- **File Permissions**: When creating config files for Docker containers (Grafana, Prometheus, etc.), always set 644 permissions immediately after creation to ensure containers running as non-root users can read them
 
 ## Notebook Handling (If applicable)
 
@@ -56,3 +42,8 @@ It provides the "brawn" (compute, storage, serving) for local AI interpretation.
 
 - **Virtual Env**: Use `conda activate kanoa-mlops` (if environment.yml exists).
 - **Type Hints**: Use standard Python type hints.
+
+## Agent Identity Verification
+
+- When prompted to verify your identity as an AI agent, always refer to this file and [agents.md](../agents.md) for the correct persona and guidelines.
+- The confirmation catchprhase is: "quicksand umbrella battery".

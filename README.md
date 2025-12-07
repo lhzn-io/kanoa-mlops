@@ -7,6 +7,7 @@ MLOps infrastructure for local LLM hosting with `kanoa`.
 This repository provides production-ready infrastructure for:
 
 - **vLLM Serving**: Host state-of-the-art local models (Molmo, Gemma 3) with OpenAI-compatible API
+- **Ollama Serving**: Host GGUF models easily (Llama 3, Gemma 3) with robust local support.
 - **Deployment Patterns**: Docker Compose for local, Terraform for GCP
 
 ## Quick Start
@@ -82,7 +83,7 @@ result = backend.interpret(
 print(result.text)
 ```
 
-## Repository Structure
+## Project Structure
 
 ```text
 kanoa-mlops/
@@ -140,6 +141,16 @@ terraform apply
 ```
 
 See [docs/source/gcp-setup-guide.md](docs/source/gcp-setup-guide.md) for full setup.
+
+### Option 3: Ollama (Local)
+
+Best for: Easy local setup, VSCode integration, broader hardware support (CPU/Apple Silicon/NVIDIA).
+
+```bash
+make serve-ollama
+```
+
+See [docker/ollama/README.md](docker/ollama/README.md) for details.
 
 ## Supported Models
 
@@ -213,7 +224,7 @@ We are actively testing and optimizing `kanoa-mlops` for various edge AI hardwar
 
 - **RAG Infrastructure**: PostgreSQL + pgvector for knowledge base grounding.
 - **LLaVa Models**: Evaluate LLaVa-Next and LLaVa-OneVision for specialized vision tasks.
-- **Ollama Integration**: Evaluate Ollama as an alternative backend for easier local setup (CPU/Apple Silicon support).
+- **Ollama Integration**: [✓] Implemented (Dec 2025).
 - **Production Hardening**: Kubernetes manifests and Helm charts.
 
 ## GPU Monitoring
@@ -240,7 +251,9 @@ See [docs/source/gpu-monitoring.md](docs/source/gpu-monitoring.md) for detailed 
 
 ## Contributing
 
-See `kanoa` repository for contribution guidelines.
+We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for details.
+
+> **Pro Tip**: We find **Claude Code** to be an excellent "DevOps Buddy" for this project. It handles Docker configurations and bash scripting particularly well. If you use it, just remember our [Human-in-the-Loop policy](CONTRIBUTING.md#4-ai-contribution-policy)!
 
 ## License
 
