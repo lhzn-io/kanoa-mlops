@@ -52,12 +52,10 @@ def serve_ollama(mlops_path: Path) -> None:
 def serve_monitoring(mlops_path: Path) -> None:
     """Start Monitoring stack."""
     run_command(
-        ["docker", "compose", "-f", "docker-compose.monitoring.yml", "up", "-d"],
+        ["make", "serve-monitoring"],
         cwd=mlops_path,
         description="Starting Monitoring stack"
     )
-    console.print("[green]Grafana: http://localhost:3000 (admin/admin)[/green]")
-    console.print("[green]Prometheus: http://localhost:9090[/green]")
 
 
 def stop_all(mlops_path: Path) -> None:

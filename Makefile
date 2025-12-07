@@ -17,7 +17,11 @@ help:
 	@echo "  make deploy-molmo       - Deploy vLLM with Molmo-7B (~\$$0.70/hr)"
 	@echo "  make deploy-gemma3-4b   - Deploy vLLM with Gemma 3 4B"
 	@echo "  make deploy-gemma3-12b  - Deploy vLLM with Gemma 3 12B"
+	@echo "  make deploy-gemma3-27b  - Deploy vLLM with Gemma 3 27B"
+	@echo "  make deploy-llama3-8b   - Deploy vLLM with Llama 3 8B"
 	@echo "  make serve-molmo        - Serve Molmo 7B locally (native)"
+	@echo "  make serve-ollama       - Serve Ollama locally (Docker)"
+	@echo "  make serve-monitoring   - Serve Monitoring stack (Prometheus/Grafana)"
 	@echo "  make destroy            - Destroy current deployment"
 	@echo "  make status             - Show deployment status"
 	@echo "  make stop               - Stop instance (save costs)"
@@ -30,6 +34,7 @@ help:
 	@echo "  make setup              - Alias for setup-dev"
 	@echo "  make lint               - Run linting checks"
 	@echo "  make test               - Run smoke tests"
+	@echo "  make test-ollama        - Run Ollama integration tests"
 	@echo "  make gpu-probe          - Probe GPU and display metadata"
 	@echo "  make clean              - Remove temp files"
 	@echo ""
@@ -149,6 +154,12 @@ serve-ollama:
 	@echo "Ollama is running at http://localhost:11434"
 	@echo "To pull a model: docker compose -f docker/ollama/docker-compose.ollama.yml exec ollama ollama pull <model>"
 	@echo "mounted HF cache: ~/.cache/huggingface -> /root/.cache/huggingface (ro)"
+
+serve-monitoring:
+	@echo "Starting Monitoring stack..."
+	@docker compose -f docker-compose.monitoring.yml up -d
+	@echo "Grafana: http://localhost:3000 (admin/admin)"
+	@echo "Prometheus: http://localhost:9090"
 
 test-ollama:
 	@echo "Running Ollama integration tests..."
