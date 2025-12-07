@@ -11,8 +11,8 @@ global:
 
   # Attach these labels to any time series or alerts
   external_labels:
-    cluster: 'local-dev'
-    environment: 'development'
+    cluster: "local-dev"
+    environment: "development"
 
 # Alertmanager configuration (optional - uncomment if needed)
 # alerting:
@@ -28,24 +28,37 @@ global:
 # Scrape configurations
 scrape_configs:
   # Prometheus self-monitoring
-  - job_name: 'prometheus'
+  - job_name: "prometheus"
     static_configs:
-      - targets: ['localhost:9090']
+      - targets: ["localhost:9090"]
         labels:
-          instance: 'prometheus'
+          instance: "prometheus"
 
   # Local vLLM server metrics
   # vLLM exposes Prometheus metrics at /metrics endpoint
-  - job_name: 'vllm-local'
+  - job_name: "vllm-local"
     scrape_interval: 15s
     scrape_timeout: 10s
-    metrics_path: '/metrics'
+    metrics_path: "/metrics"
     static_configs:
-      - targets: ['host.docker.internal:8000']
+      - targets: ["host.docker.internal:8000"]
         labels:
-          instance: 'vllm-local'
-          model: 'local-inference'
-          environment: 'development'
+          instance: "vllm-local"
+          model: "local-vllm"
+          environment: "development"
+
+  # Local Ollama server metrics
+  # Ollama exposes metrics at /metrics by default
+  - job_name: "ollama"
+    scrape_interval: 15s
+    scrape_timeout: 10s
+    metrics_path: "/metrics"
+    static_configs:
+      - targets: ["host.docker.internal:11434"]
+        labels:
+          instance: "ollama"
+          model: "local-ollama"
+          environment: "development"
 
     # Optional: Only scrape if vLLM is running
     # Prometheus will mark target as down if unreachable
@@ -85,14 +98,14 @@ scrape_configs:
   #         environment: 'staging'
 
   # NVIDIA GPU metrics exporter
-  - job_name: 'nvidia-dcgm'
+  - job_name: "nvidia-dcgm"
     scrape_interval: 5s
     scrape_timeout: 5s
     static_configs:
-      - targets: ['nvidia-dcgm-exporter:9400']
+      - targets: ["nvidia-dcgm-exporter:9400"]
         labels:
-          instance: 'local-gpu'
-          gpu_type: 'rtx-5080'
+          instance: "local-gpu"
+          gpu_type: "rtx-5080"
 
   # Optional: Node exporter for system metrics (CPU, memory, disk)
   # Uncomment if you want to monitor host system alongside GPU
@@ -101,7 +114,6 @@ scrape_configs:
   #     - targets: ['host.docker.internal:9100']
   #       labels:
   #         instance: 'local-host'
-
 # Storage configuration (already set via CLI flags in docker-compose)
 # storage:
 #   tsdb:
