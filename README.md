@@ -9,20 +9,70 @@
 - **Full Observability** — Prometheus + Grafana + NVIDIA DCGM monitoring stack
 - **Seamless Integration** — Extends `kanoa` CLI with `serve` and `stop` commands
 
-## Quick Start
+## Installation
 
-### The Fast Path (Ollama)
-
-Get running in under 2 minutes with Ollama — no model downloads required:
+### For Users (add to your project)
 
 ```bash
-# Install kanoa-mlops as a plugin
-pip install -e .
+# Base install (local inference with Ollama/vLLM)
+pip install kanoa-mlops
+
+# With GCP support (for cloud deployment)
+pip install kanoa-mlops[gcp]
+
+# Everything (GCP + dev tools)
+pip install kanoa-mlops[all]
+```
+
+### For Contributors
+
+```bash
+# Clone and install in editable mode
+git clone https://github.com/lhzn-io/kanoa-mlops.git
+cd kanoa-mlops
+
+# Base environment (no GCP tools)
+conda env create -f environment.yml
+conda activate kanoa-mlops
+
+# Or with GCP infrastructure tools (terraform, gcloud)
+conda env create -f environment-gcp.yml
+conda activate kanoa-mlops-gcp
+```
+
+## Quick Start
+
+### Option A: Add to Existing Project (pip)
+
+For users adding local AI to a science project:
+
+```bash
+# Install the package
+pip install kanoa-mlops
+
+# Initialize docker templates in your project
+kanoa init mlops --dir .
+
+# Start Ollama
+kanoa serve ollama
+
+# Done! Your project now has local AI
+```
+
+### Option B: Clone Repository (full setup)
+
+For contributors or those wanting the full monitoring stack:
+
+```bash
+# Clone the repo
+git clone https://github.com/lhzn-io/kanoa-mlops.git
+cd kanoa-mlops
 
 # Start Ollama (pulls model on first run)
 kanoa serve ollama
 
-# That's it! Use with kanoa
+# Start monitoring (optional)
+kanoa serve monitoring
 ```
 
 ### The Performance Path (vLLM)
@@ -116,17 +166,23 @@ backend = VLLMBackend(
 `kanoa-mlops` extends the `kanoa` CLI with infrastructure commands:
 
 ```bash
+# Initialize (for pip users)
+kanoa init mlops --dir .  # Scaffold docker templates
+
 # Start services
-kanoa serve ollama      # Start Ollama
-kanoa serve monitoring  # Start Prometheus + Grafana
-kanoa serve all         # Start everything
+kanoa serve ollama       # Start Ollama
+kanoa serve monitoring   # Start Prometheus + Grafana
+kanoa serve all          # Start everything
 
 # Stop services
-kanoa stop              # Stop all services
-kanoa stop ollama       # Stop specific service
+kanoa stop               # Stop all services
+kanoa stop ollama        # Stop specific service
+
+# Status
+kanoa status             # Show config and running services
 
 # Restart services
-kanoa restart ollama    # Restart Ollama
+kanoa restart ollama     # Restart Ollama
 ```
 
 ## Monitoring Stack
@@ -272,6 +328,8 @@ pip install -e /path/to/kanoa -e /path/to/kanoa-mlops
 ## Contributing
 
 We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+- **Adding New Models?** Check out the [Model Contribution Guide](docs/adding-models.md).
 
 > **Pro Tip**: We find **Claude Code** to be an excellent DevOps buddy for this project. If you use AI tools, just remember our [Human-in-the-Loop policy](CONTRIBUTING.md#4-ai-contribution-policy).
 

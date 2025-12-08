@@ -1,0 +1,65 @@
+services:
+  vllm-molmo:
+    build:
+      context: .
+      dockerfile: Dockerfile.molmo
+    image: kanoa-vllm-molmo:latest
+    container_name: kanoa-vllm-molmo
+    ports:
+      - "8000:8000"
+    volumes:
+      - ${HF_HOME:-~/.cache/huggingface}:/root/.cache/huggingface:rw
+      - ${MODELS_DIR:-~/.cache/kanoa/models}:/models:ro
+    environment:
+      - CUDA_VISIBLE_DEVICES=0
+      - HF_HOME=/root/.cache/huggingface
+      - TF_FORCE_GPU_ALLOW_GROWTH=true
+      - TF_CPP_MIN_LOG_LEVEL=3
+    command:
+      - --model
+      - ${MODEL_NAME:-allenai/Molmo-7B-D-0924}
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
+      - --served-model-name
+      - ${SERVED_MODEL_NAME:-allenai/Molmo-7B-D-0924}
+      - --trust-remote-code
+      # RAG Context & Latency Configuration
+      # We use 4-bit quantization to minimize memory usage, allowing for a larger context window (KV cache).
+      # This is crucial for RAG applications where we need to "stuff" retrieved documents into the context.
+      # Trade-off: Slight increase in latency due to on-the-fly dequantization, but allows running on consumer GPUs (e.g. RTX 5080).
+      - --quantization
+      - bitsandbytes
+      - --load-format
+      - bitsandbytes
+      # - --max-model-len
+      # - "4096" # Commented out to allow vLLM to maximize context based on available VRAM (likely 8192 for Molmo)
+      - --max-num-seqs
+      - "5" # Conservative limit for single-user local dev
+      - --gpu-memory-utilization
+      - "0.8" # Lowered to 0.8 to prevent hangs with concurrent clients on 16GB VRAM
+      # Performance Tuning for RTX 5080 (Blackwell)
+      - --kv-cache-dtype
+      - fp8  # Reduces VRAM usage, increases context length
+      - --enable-chunked-prefill
+      # - --max-num-batched-tokens
+      # - "512" # Adjust based on latency needs
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [ gpu ]
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+
+networks:
+  default:
+    name: kanoa-mlops

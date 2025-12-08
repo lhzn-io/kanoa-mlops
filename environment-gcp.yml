@@ -1,0 +1,23 @@
+# GCP infrastructure contributor environment
+# Includes terraform + gcloud for cloud deployments
+#
+# Usage:
+#   conda env create -f environment-gcp.yml
+#   conda activate kanoa-mlops-gcp
+name: kanoa-mlops-gcp
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  - pip
+  # Infrastructure tools (GCP deployment)
+  - terraform>=1.5.0
+  - google-cloud-sdk
+  # Linting
+  - shellcheck
+  # Utilities
+  - curl
+  - jq
+  - pip:
+      - -e ".[dev,gcp]"
