@@ -58,3 +58,7 @@ tests/integration/benchmark_*.json
 
 # local compose files (kanoa init mlops build artifacts)
 docker/
+
+# Benchmarks
+tests/integration/benchmark_results.json
+tests/integration/benchmark_results_*.json

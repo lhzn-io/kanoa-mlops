@@ -27,7 +27,7 @@ def run_single_benchmark():
 
 
 def main():
-    num_runs = 3
+    num_runs = 10
     results = []
 
     print(f"Running {num_runs} benchmark iterations for Molmo 7B...\n")
