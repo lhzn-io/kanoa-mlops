@@ -36,3 +36,14 @@ repos:
       - id: detect-secrets
         args: ['--baseline', '.secrets.baseline']
         exclude: \.secrets\.baseline$
+
+  # Unit Tests
+  - repo: local
+    hooks:
+      - id: pytest
+        name: pytest
+        entry: env PYTHONPATH=. pytest tests/unit
+        language: system
+        types: [python]
+        pass_filenames: false
+        always_run: true

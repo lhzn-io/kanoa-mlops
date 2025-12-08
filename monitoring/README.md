@@ -65,7 +65,7 @@ Open your browser to: http://localhost:3000
 
 **Default credentials:**
 - Username: `admin`
-- Password: `admin`
+- Password: `admin` <!-- pragma: allowlist secret -->
 
 (You'll be prompted to change the password on first login)
 
@@ -252,7 +252,7 @@ If your remote endpoint requires authentication:
     - targets: ['<GCP_EXTERNAL_IP>:8000']
   basic_auth:
     username: 'prometheus'
-    password: 'your-password'  # Or use password_file
+    password: 'your-password'  # pragma: allowlist secret
 ```
 
 ### 3. Optional: Add TLS
