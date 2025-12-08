@@ -82,7 +82,28 @@ def run_docker_compose(
         subprocess.run(cmd, check=True)
         return True
     except subprocess.CalledProcessError:
-        # Check if the failure was due to missing plugin
+        # DIAGNOSTIC 1: Check for permission issues (docker group)
+        try:
+            subprocess.run(
+                ["docker", "info"],
+                check=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.PIPE,
+            )
+        except subprocess.CalledProcessError as e:
+            err_msg = e.stderr.decode().lower()
+            if "permission denied" in err_msg and "docker.sock" in err_msg:
+                console.print(
+                    "[red]Error: Permission denied accessing Docker daemon.[/red]"
+                )
+                console.print("You need to add your user to the 'docker' group:")
+                console.print("  [bold]sudo usermod -aG docker $USER[/bold]")
+                console.print(
+                    "  [dim](You may need to log out and back in for this to take effect)[/dim]"
+                )
+                return False
+
+        # DIAGNOSTIC 2: Check if the failure was due to missing plugin
         is_plugin_missing = False
         try:
             subprocess.run(
