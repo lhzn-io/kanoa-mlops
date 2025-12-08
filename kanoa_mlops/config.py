@@ -57,3 +57,13 @@ def set_mlops_path(path: Path) -> None:
     config = load_config()
     config["mlops_path"] = str(path.resolve())
     save_config(config)
+
+
+def get_templates_path() -> Path:
+    """
+    Get the path to the kanoa-mlops templates directory.
+
+    Returns:
+        Path to the templates directory within the kanoa_mlops package.
+    """
+    return Path(__file__).parent / "templates"

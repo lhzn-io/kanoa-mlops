@@ -11,6 +11,7 @@ dependencies = [
     "rich>=13.0.0",           # CLI output formatting
     "toml>=0.10.0",           # Config file parsing
     "huggingface-hub>=0.20.0", # Model downloads
+    "jinja2>=3.1.0",          # Template rendering for architecture-aware configs
 ]
 
 # Optional dependency groups

@@ -12,9 +12,15 @@ import subprocess
 import sys
 from pathlib import Path
 
-from kanoa_mlops.config import get_mlops_path, set_mlops_path
+from jinja2 import Environment, FileSystemLoader, select_autoescape
+from rich.console import Console
+
+from kanoa_mlops.arch_detect import detect_architecture
+from kanoa_mlops.config import get_mlops_path, get_templates_path, set_mlops_path
 
 import re
+
+console = Console()
 
 
 # Detect which compose client is available and cache it
@@ -187,6 +193,42 @@ def run_docker_compose(
         return False
 
 
+def _ignore_jinja_templates(dir, files):
+    """Ignore .j2 template files during copytree."""
+    return [f for f in files if f.endswith('.j2')]
+
+
+def _render_templates(templates_dir: Path, target_dir: Path, arch_config):
+    """
+    Render Jinja2 templates with architecture-specific values.
+    
+    Args:
+        templates_dir: Source templates directory
+        target_dir: Target output directory
+        arch_config: ArchConfig from arch_detect
+    """
+    env = Environment(
+        loader=FileSystemLoader(templates_dir),
+        autoescape=select_autoescape(['html', 'xml']),
+        trim_blocks=True,
+        lstrip_blocks=True,
+    )
+    
+    # Find all .j2 template files
+    for template_file in templates_dir.rglob("*.j2"):
+        rel_path = template_file.relative_to(templates_dir)
+        output_path = target_dir / str(rel_path).rstrip('.j2')
+        
+        # Render template
+        template = env.get_template(str(rel_path))
+        rendered = template.render(arch_config=arch_config)
+        
+        # Write output
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(rendered)
+        console.print(f"  [dim]→ Rendered {rel_path} → {output_path.name}[/dim]")
+
+
 # =============================================================================
 # Command Handlers
 # =============================================================================
@@ -195,6 +237,10 @@ def run_docker_compose(
 def handle_init(args) -> None:
     """Initialize kanoa-mlops in a directory by copying templates."""
     target_dir = Path(args.directory).resolve()
+
+    # Detect hardware architecture
+    arch_config = detect_architecture()
+    console.print(f"[cyan]Detected: {arch_config.description}[/cyan]")
 
     # Get bundled templates
     templates_dir = get_templates_path()
@@ -227,7 +273,12 @@ def handle_init(args) -> None:
         sys.exit(1)
 
     try:
-        shutil.copytree(docker_src, docker_dst, dirs_exist_ok=True)
+        # Copy static files (non-.j2)
+        shutil.copytree(docker_src, docker_dst, dirs_exist_ok=True, ignore=_ignore_jinja_templates)
+        
+        # Render Jinja2 templates
+        _render_templates(templates_dir, target_dir, arch_config)
+        
     except PermissionError:
         console.print(f"[red]Error: Permission denied copying templates to {docker_dst}[/red]")
         sys.exit(1)
@@ -239,6 +290,8 @@ def handle_init(args) -> None:
     set_mlops_path(target_dir)
 
     console.print(f"[green]✔ Initialized kanoa-mlops in {target_dir}[/green]")
+    console.print(f"[green]  Platform: {arch_config.platform_name}[/green]")
+    console.print(f"[green]  vLLM Image: {arch_config.vllm_image}[/green]")
     console.print("")
     console.print("Next steps:")
     console.print("  kanoa serve ollama      # Start Ollama server")

@@ -1,6 +1,12 @@
 services:
   vllm-gemma3:
+{% if arch_config.platform_name == "jetson-thor" %}
+    # Jetson Thor: Use pre-built NVIDIA image with sm_110 support
+    image: {{ arch_config.vllm_image }}
+{% else %}
+    # x86_64 or Jetson Orin: Use official vLLM image
     image: vllm/vllm-openai:latest
+{% endif %}
     container_name: kanoa-vllm-gemma3
     ports:
       - "8000:8000" # Standard vLLM port (use 8001:8000 if running alongside Molmo)
@@ -24,18 +30,18 @@ services:
       - --max-num-seqs
       - "5" # Conservative limit for single-user local dev
       - --gpu-memory-utilization
-      - "0.8" # Lowered to 0.8 to prevent hangs with concurrent clients on 16GB VRAM
-      # Performance Tuning for RTX 5080 (Blackwell)
+      - "0.8" # Lowered to 0.8 to prevent hangs with concurrent clients
+      # Performance Tuning for {{ arch_config.description }}
       - --kv-cache-dtype
-      - fp8  # Native support on 50-series, doubles cache capacity
+      - fp8  # Reduces VRAM usage, increases context length
       - --enable-chunked-prefill
-      # 4-bit quantization is HIGHLY RECOMMENDED for RTX 5080 (16GB VRAM)
-      # to ensure sufficient context window (KV cache) for RAG applications.
-      # Without this, context may be limited to <4k tokens.
+{% if arch_config.platform_name != "jetson-thor" %}
+      # 4-bit quantization recommended for VRAM-constrained systems
       - --quantization
       - bitsandbytes
       - --load-format
       - bitsandbytes
+{% endif %}
     deploy:
       resources:
         reservations:

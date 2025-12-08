@@ -1,6 +1,12 @@
 services:
   vllm-olmo3:
+{% if arch_config.platform_name == "jetson-thor" %}
+    # Jetson Thor: Use pre-built NVIDIA image with sm_110 support
+    image: {{ arch_config.vllm_image }}
+{% else %}
+    # x86_64 or Jetson Orin: Use official vLLM image
     image: vllm/vllm-openai:latest
+{% endif %}
     container_name: kanoa-vllm-olmo3
     ports:
       - "8000:8000" # Standard vLLM port
@@ -25,6 +31,10 @@ services:
       - "5"
       - --gpu-memory-utilization
       - "0.9"
+      # Performance Tuning for {{ arch_config.description }}
+      - --kv-cache-dtype
+      - fp8
+      - --enable-chunked-prefill
       # OLMo specific optimizations
       - --dtype
       - bfloat16
