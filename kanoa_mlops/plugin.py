@@ -12,18 +12,21 @@ from typing import List
 # but since it's a plugin for kanoa, rich should be available.
 try:
     from rich.console import Console
+
     console = Console()
 except ImportError:
+
     class Console:
         def print(self, *args, **kwargs):
             print(*args, **kwargs)
+
     console = Console()
 
 
 def get_kanoa_mlops_path() -> Path:
     """
     Locate the kanoa-mlops repository root.
-    
+
     Since this file is at kanoa_mlops/plugin.py, the repo root is 2 levels up.
     """
     return Path(__file__).resolve().parent.parent
@@ -31,7 +34,7 @@ def get_kanoa_mlops_path() -> Path:
 
 def run_command(command: List[str], cwd: Path, description: str) -> None:
     """Run a shell command in the specified directory."""
-    console.print(f"[bold blue]ℹ {description}...[/bold blue]")
+    console.print(f"[bold blue]i {description}...[/bold blue]")
     try:
         subprocess.run(command, cwd=cwd, check=True)
         console.print("[bold green]✔ Done.[/bold green]")
@@ -43,9 +46,7 @@ def run_command(command: List[str], cwd: Path, description: str) -> None:
 def serve_ollama(mlops_path: Path) -> None:
     """Start Ollama service."""
     run_command(
-        ["make", "serve-ollama"],
-        cwd=mlops_path,
-        description="Starting Ollama service"
+        ["make", "serve-ollama"], cwd=mlops_path, description="Starting Ollama service"
     )
 
 
@@ -54,7 +55,7 @@ def serve_monitoring(mlops_path: Path) -> None:
     run_command(
         ["make", "serve-monitoring"],
         cwd=mlops_path,
-        description="Starting Monitoring stack"
+        description="Starting Monitoring stack",
     )
 
 
@@ -65,17 +66,23 @@ def stop_all(mlops_path: Path) -> None:
     # Stop Ollama
     with contextlib.suppress(Exception):
         run_command(
-            ["docker", "compose", "-f", "docker/ollama/docker-compose.ollama.yml", "down"],
+            [
+                "docker",
+                "compose",
+                "-f",
+                "docker/ollama/docker-compose.ollama.yml",
+                "down",
+            ],
             cwd=mlops_path,
-            description="Stopping Ollama"
+            description="Stopping Ollama",
         )
 
     # Stop Monitoring
     with contextlib.suppress(Exception):
-         run_command(
+        run_command(
             ["docker", "compose", "-f", "docker-compose.monitoring.yml", "down"],
             cwd=mlops_path,
-            description="Stopping Monitoring"
+            description="Stopping Monitoring",
         )
 
     console.print("[bold green]✔ All services stopped.[/bold green]")
@@ -106,13 +113,15 @@ def handle_stop(args) -> None:
 def register(parser) -> None:
     """Register CLI subcommands."""
     # Add 'serve' command
-    serve_parser = parser.add_parser("serve", help="Start local services (vLLM/Ollama/Monitoring)")
+    serve_parser = parser.add_parser(
+        "serve", help="Start local services (vLLM/Ollama/Monitoring)"
+    )
     serve_parser.add_argument(
         "service",
         choices=["ollama", "monitoring", "all"],
         default="all",
         nargs="?",
-        help="Service to start"
+        help="Service to start",
     )
     serve_parser.set_defaults(func=handle_serve)
 
