@@ -22,6 +22,8 @@ services:
       - --trust-remote-code
       - --max-model-len
       - "8192"
+      # Higher GPU memory utilization is safe on Jetson Thor due to 128GB unified memory architecture
+      # This allows maximum context window and batching capabilities for the 32B parameter model
       - --gpu-memory-utilization
       - "0.9"
     deploy:
