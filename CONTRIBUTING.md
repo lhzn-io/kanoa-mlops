@@ -15,11 +15,18 @@ We welcome contributions! Please follow these guidelines to ensure a smooth proc
         conda activate kanoa-mlops
         ```
 
-3. **Install pre-commit hooks** (if applicable):
+3. **Install pre-commit hooks** (Required):
+    This ensures your code is linted, formatted, and tested before every commit.
 
     ```bash
     pre-commit install
     ```
+
+    **What this does:**
+    - **Ruff**: Lints and formats Python code
+    - **ShellCheck**: Checks shell scripts
+    - **Detect Secrets**: Prevents committing API keys
+    - **Pytest**: Runs unit tests automatically
 
 4. **Create a branch** for your feature or fix:
 
