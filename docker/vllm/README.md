@@ -51,8 +51,8 @@ sudo systemctl restart docker
 ### Download Molmo Model
 
    ```bash
-   # Run from kanoa-mlops root
-   ./scripts/download-models.sh molmo-7b-d
+   ```bash
+   huggingface-cli download allenai/Molmo-7B-D-0924
    ```
 
 ## Quick Start

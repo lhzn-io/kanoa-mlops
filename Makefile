@@ -143,8 +143,8 @@ deploy-molmo:
 serve-molmo:
 	@echo "Starting Molmo 7B server (native)..."
 	@if [ ! -d "${MOLMO_MODEL_PATH:-$(HOME)/.cache/kanoa/models/molmo}" ]; then \
-		echo "Model not found. Downloading..."; \
-		./scripts/download-models.sh molmo-7b-d; \
+	@echo "Model not found? Run: huggingface-cli download allenai/Molmo-7B-D-0924"; \
+		huggingface-cli download allenai/Molmo-7B-D-0924; \
 	fi
 	@export MOLMO_MODEL_PATH=${MOLMO_MODEL_PATH:-$(HOME)/.cache/kanoa/models/molmo} && \
 	python3 -m vllm.entrypoints.openai.api_server \

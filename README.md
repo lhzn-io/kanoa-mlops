@@ -81,7 +81,7 @@ For maximum throughput on NVIDIA GPUs:
 
 ```bash
 # Download model (~14GB)
-./scripts/download-models.sh molmo-7b-d
+huggingface-cli download allenai/Molmo-7B-D-0924
 
 # Start vLLM server
 docker compose -f docker/vllm/docker-compose.molmo.yml up -d
