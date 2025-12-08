@@ -28,17 +28,14 @@ help:
 	@echo "  make clean-infra        - Destroy ALL deployments"
 	@echo ""
 	@echo "Local Services:"
-	@echo "  make serve-ollama       - Start Ollama (Docker)"
-	@echo "  make serve-monitoring   - Start Monitoring stack (Prometheus/Grafana)"
-	@echo "  make serve-molmo        - Start Molmo 7B (native vLLM)"
-	@echo "  make serve-olmo3-32b    - Start Olmo3 32B Think (Docker vLLM)"
-	@echo "  make stop-ollama        - Stop Ollama"
-	@echo "  make stop-monitoring    - Stop Monitoring stack"
-	@echo "  make stop-olmo3-32b     - Stop Olmo3 32B Think"
-	@echo "  make stop-all           - Stop all local services"
-	@echo "  make restart-ollama     - Restart Ollama"
-	@echo "  make restart-monitoring - Restart Monitoring stack"
-	@echo "  make restart-olmo3-32b  - Restart Olmo3 32B Think"
+	@echo "  Use the 'kanoa' CLI for local services:"
+	@echo "    kanoa serve ollama"
+	@echo "    kanoa serve monitoring"
+	@echo "    kanoa serve vllm-gemma"
+	@echo "    kanoa stop"
+	@echo ""
+	@echo "  Legacy/Native:"
+	@echo "  make serve-molmo        - Start Molmo 7B (native vLLM, no Docker)"
 	@echo ""
 	@echo "Development:"
 	@echo "  make setup-user         - Install user dependencies (pip)"
@@ -160,47 +157,32 @@ serve-molmo:
 		--gpu-memory-utilization 0.9 \
 		--port 8000
 
+# Deprecated: Use 'kanoa serve ollama'
 serve-ollama:
-	@echo "Starting Ollama server..."
-	@docker compose -f docker/ollama/docker-compose.ollama.yml up -d
-	@echo "Ollama is running at http://localhost:11434"
-	@echo "To pull a model: docker compose -f docker/ollama/docker-compose.ollama.yml exec ollama ollama pull <model>"
-	@echo "mounted HF cache: ~/.cache/huggingface -> /root/.cache/huggingface (ro)"
+	@echo "⚠️  Deprecated: Use 'kanoa serve ollama' instead."
+	@kanoa serve ollama
 
+# Deprecated: Use 'kanoa serve monitoring'
 serve-monitoring:
-	@echo "Starting Monitoring stack..."
-	@docker compose -f docker/monitoring/docker-compose.yml up -d
-	@echo "Grafana: http://localhost:3000 (admin/admin)"
-	@echo "Prometheus: http://localhost:9090"
+	@echo "⚠️  Deprecated: Use 'kanoa serve monitoring' instead."
+	@kanoa serve monitoring
 
+# Deprecated: Use 'kanoa serve vllm-olmo3'
 serve-olmo3-32b:
-	@echo "Starting Olmo3 32B Think server..."
-	@docker compose -f docker/vllm/docker-compose.olmo3.yml up -d
-	@echo "Olmo3 32B Think is running at http://localhost:8000"
-	@echo "Model: allenai/Olmo-3-32B-Think"
-	@echo "Health check: curl http://localhost:8000/health"
+	@echo "⚠️  Deprecated: Use 'kanoa serve vllm-olmo3' instead."
+	@kanoa serve vllm-olmo3
 
 stop-ollama:
-	@echo "Stopping Ollama..."
-	@docker compose -f docker/ollama/docker-compose.ollama.yml down
-	@echo "Ollama stopped."
+	@kanoa stop ollama
 
 stop-monitoring:
-	@echo "Stopping Monitoring stack..."
-	@docker compose -f docker/monitoring/docker-compose.yml down
-	@echo "Monitoring stopped."
+	@kanoa stop monitoring
 
 stop-olmo3-32b:
-	@echo "Stopping Olmo3 32B Think..."
-	@docker compose -f docker/vllm/docker-compose.olmo3.yml down
-	@echo "Olmo3 32B Think stopped."
+	@kanoa stop vllm-olmo3
 
 stop-all:
-	@echo "Stopping all local services..."
-	-@docker compose -f docker/ollama/docker-compose.ollama.yml down 2>/dev/null
-	-@docker compose -f docker/monitoring/docker-compose.yml down 2>/dev/null
-	-@docker compose -f docker/vllm/docker-compose.olmo3.yml down 2>/dev/null
-	@echo "All local services stopped."
+	@kanoa stop
 
 restart-ollama: stop-ollama serve-ollama
 
