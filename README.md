@@ -121,8 +121,12 @@ kanoa serve ollama      # Start Ollama
 kanoa serve monitoring  # Start Prometheus + Grafana
 kanoa serve all         # Start everything
 
-# Stop all services
-kanoa stop
+# Stop services
+kanoa stop              # Stop all services
+kanoa stop ollama       # Stop specific service
+
+# Restart services
+kanoa restart ollama    # Restart Ollama
 ```
 
 ## Monitoring Stack
@@ -205,13 +209,56 @@ Llama 3.1, Mistral, Qwen 2.5, and [100+ more](https://ollama.com/library).
 | GCP L4 GPU | [✓] Verified | 24GB VRAM, ~$0.70/hr |
 | Intel/AMD GPU | — | Not supported |
 
+## Development Setup
+
+### Plugin Architecture
+
+`kanoa-mlops` is a **plugin** for the `kanoa` CLI. The `kanoa` package provides the CLI framework, and `kanoa-mlops` registers additional commands (`serve`, `stop`, `restart`) via Python entry points.
+
+```text
+kanoa (CLI)  ──loads──►  kanoa-mlops (plugin)
+     │                        │
+     └── entry points ◄───────┘
+```
+
+### Co-Development Setup
+
+To develop both packages simultaneously, install both in **editable mode**:
+
+```bash
+# Clone both repos
+git clone https://github.com/lhzn-io/kanoa.git
+git clone https://github.com/lhzn-io/kanoa-mlops.git
+
+# Create and activate environment
+conda env create -f kanoa-mlops/environment.yml
+conda activate kanoa-mlops
+
+# Install BOTH packages in editable mode
+pip install -e ./kanoa           # Provides 'kanoa' CLI
+pip install -e ./kanoa-mlops     # Registers plugin commands
+
+# Verify
+kanoa --help  # Should show: serve, stop, restart
+```
+
+> **Why both?** The `kanoa` package provides the CLI entry point. The `kanoa-mlops` package registers its commands as plugins. Both must be installed for the full CLI to work.
+
+### Quick Reinstall
+
+If you switch conda environments or commands are missing:
+
+```bash
+pip install -e /path/to/kanoa -e /path/to/kanoa-mlops
+```
+
 ## Prerequisites
 
 - **Docker** and Docker Compose
 - **NVIDIA GPU + Drivers** (for vLLM)
 - **Python 3.11+**
 
-**WSL2 Users**: Install NVIDIA drivers on Windows, not inside WSL. See [docs/source/wsl2-gpu-setup.md](docs/source/wsl2-gpu-setup.md).
+**WSL2/eGPU Users**: See the [Local GPU Setup Guide](docs/source/local-gpu-setup.md) for platform-specific instructions.
 
 ## Roadmap
 
