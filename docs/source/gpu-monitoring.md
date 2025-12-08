@@ -98,7 +98,7 @@ For production-grade monitoring with dashboards and historical metrics, use the 
 
 ```bash
 # From kanoa-mlops root directory
-docker compose -f docker-compose.monitoring.yml up -d
+docker compose -f docker/monitoring/docker-compose.yml up -d
 ```
 
 **Access:**

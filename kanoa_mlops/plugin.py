@@ -80,7 +80,7 @@ def stop_all(mlops_path: Path) -> None:
     # Stop Monitoring
     with contextlib.suppress(Exception):
         run_command(
-            ["docker", "compose", "-f", "docker-compose.monitoring.yml", "down"],
+            ["docker", "compose", "-f", "docker/monitoring/docker-compose.yml", "down"],
             cwd=mlops_path,
             description="Stopping Monitoring",
         )

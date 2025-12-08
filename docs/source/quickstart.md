@@ -164,7 +164,7 @@ See [Benchmarking Guide](../tests/integration/README.md) for detailed usage.
 docker compose -f docker/ollama/docker-compose.ollama.yml down
 
 # Stop monitoring
-docker compose -f docker-compose.monitoring.yml down
+docker compose -f docker/monitoring/docker-compose.yml down
 ```
 
 ## Next Steps
@@ -208,16 +208,24 @@ ls -la ~/.cache/huggingface/hub/
 
 ## Platform-Specific Notes
 
+For detailed setup instructions for your platform, see the [Local GPU Setup Guide](local-gpu-setup.md).
+
 ### NVIDIA Jetson Thor
 
 - Use Ollama for best compatibility
 - Reduce batch sizes for memory constraints
 - Monitor temperature: `tegrastats`
+- Set max power mode: `sudo nvpmodel -m 0 && sudo jetson_clocks`
 
-### WSL2
+### WSL2 (Windows)
 
-See [WSL2 GPU Setup Guide](wsl2-gpu-setup.md)
+- Install NVIDIA drivers on Windows, not in WSL2
+- Minimum driver version: R470+
+- See [Local GPU Setup Guide - WSL2 Section](local-gpu-setup.md#wsl2-setup-windows)
 
-### eGPU (Thunderbolt)
+### eGPU (Thunderbolt/OCuLink)
 
-See [eGPU Setup Guide](egpu-setup-guide.md)
+- Connect eGPU before booting
+- Authorize Thunderbolt device (Linux: `boltctl`)
+- Expect PCIe Gen3/4 x4 bandwidth
+- See [Local GPU Setup Guide - eGPU Section](local-gpu-setup.md#egpu-setup-thunderboltoculink)

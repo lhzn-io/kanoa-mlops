@@ -157,7 +157,7 @@ serve-ollama:
 
 serve-monitoring:
 	@echo "Starting Monitoring stack..."
-	@docker compose -f docker-compose.monitoring.yml up -d
+	@docker compose -f docker/monitoring/docker-compose.yml up -d
 	@echo "Grafana: http://localhost:3000 (admin/admin)"
 	@echo "Prometheus: http://localhost:9090"
 

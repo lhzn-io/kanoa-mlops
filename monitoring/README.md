@@ -38,7 +38,7 @@ The monitoring stack runs independently from vLLM, so it survives vLLM restarts.
 From the project root:
 
 ```bash
-docker compose -f docker-compose.monitoring.yml up -d
+docker compose -f docker/monitoring/docker-compose.yml up -d
 ```
 
 This will start both Prometheus and Grafana containers.
@@ -48,7 +48,7 @@ This will start both Prometheus and Grafana containers.
 Check that both services are running:
 
 ```bash
-docker compose -f docker-compose.monitoring.yml ps
+docker compose -f docker/monitoring/docker-compose.yml ps
 ```
 
 You should see:
@@ -148,19 +148,19 @@ Simpler dashboard with core vLLM metrics:
 
 ```bash
 # All services
-docker compose -f docker-compose.monitoring.yml logs -f
+docker compose -f docker/monitoring/docker-compose.yml logs -f
 
 # Prometheus only
-docker compose -f docker-compose.monitoring.yml logs -f prometheus
+docker compose -f docker/monitoring/docker-compose.yml logs -f prometheus
 
 # Grafana only
-docker compose -f docker-compose.monitoring.yml logs -f grafana
+docker compose -f docker/monitoring/docker-compose.yml logs -f grafana
 ```
 
 ### Stop the Stack
 
 ```bash
-docker compose -f docker-compose.monitoring.yml down
+docker compose -f docker/monitoring/docker-compose.yml down
 ```
 
 **Note:** This stops the containers but preserves data in volumes.
@@ -169,13 +169,13 @@ docker compose -f docker-compose.monitoring.yml down
 
 ```bash
 # WARNING: This deletes all metrics and Grafana configurations
-docker compose -f docker-compose.monitoring.yml down -v
+docker compose -f docker/monitoring/docker-compose.yml down -v
 ```
 
 ### Restart Services
 
 ```bash
-docker compose -f docker-compose.monitoring.yml restart
+docker compose -f docker/monitoring/docker-compose.yml restart
 ```
 
 ## Configuration
@@ -203,7 +203,7 @@ global:
 Then restart Prometheus:
 
 ```bash
-docker compose -f docker-compose.monitoring.yml restart prometheus
+docker compose -f docker/monitoring/docker-compose.yml restart prometheus
 ```
 
 ### Grafana
@@ -269,7 +269,7 @@ For secure HTTPS connections:
     key_file: '/etc/prometheus/certs/client.key'
 ```
 
-Mount certificates in `docker-compose.monitoring.yml`:
+Mount certificates in `docker/monitoring/docker-compose.yml`:
 
 ```yaml
 services:
@@ -285,14 +285,14 @@ services:
 docker exec kanoa-prometheus kill -HUP 1
 
 # Or restart the container
-docker compose -f docker-compose.monitoring.yml restart prometheus
+docker compose -f docker/monitoring/docker-compose.yml restart prometheus
 ```
 
 ### 5. Verify Target
 
 1. Open http://localhost:9090/targets
 2. Check that your new target appears and is "UP"
-3. If "DOWN", check logs: `docker compose -f docker-compose.monitoring.yml logs prometheus`
+3. If "DOWN", check logs: `docker compose -f docker/monitoring/docker-compose.yml logs prometheus`
 
 ## Troubleshooting
 
@@ -353,18 +353,18 @@ docker exec kanoa-prometheus wget -O- http://host.docker.internal:8000/metrics
 **Check logs:**
 
 ```bash
-docker compose -f docker-compose.monitoring.yml logs grafana
+docker compose -f docker/monitoring/docker-compose.yml logs grafana
 ```
 
 **Common issues:**
-- Port 3000 already in use: Change port in `docker-compose.monitoring.yml`
+- Port 3000 already in use: Change port in `docker/monitoring/docker-compose.yml`
 - Permission issues: Check volume permissions
 
 ### Prometheus Storage Full
 
 By default, Prometheus retains 30 days of data. To adjust:
 
-Edit `docker-compose.monitoring.yml`:
+Edit `docker/monitoring/docker-compose.yml`:
 
 ```yaml
 services:
@@ -376,9 +376,9 @@ services:
 Or clear old data:
 
 ```bash
-docker compose -f docker-compose.monitoring.yml down
+docker compose -f docker/monitoring/docker-compose.yml down
 docker volume rm kanoa_prometheus-data
-docker compose -f docker-compose.monitoring.yml up -d
+docker compose -f docker/monitoring/docker-compose.yml up -d
 ```
 
 ### WSL2 Specific: host.docker.internal Not Working
@@ -403,7 +403,7 @@ Edit [prometheus/prometheus.yml](./prometheus/prometheus.yml):
 
 **Option 2: Use host network mode**
 
-Edit `docker-compose.monitoring.yml`:
+Edit `docker/monitoring/docker-compose.yml`:
 
 ```yaml
 services:

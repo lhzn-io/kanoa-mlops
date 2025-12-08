@@ -6,9 +6,8 @@ kanoa-mlops Documentation
    :caption: Getting Started
 
    quickstart
+   local-gpu-setup
    gcp-setup-guide
-   wsl2-gpu-setup
-   egpu-setup-guide
 
 .. toctree::
    :maxdepth: 2
