@@ -9,7 +9,6 @@ services:
       - "8000:8000"
     volumes:
       - ${HF_HOME:-~/.cache/huggingface}:/root/.cache/huggingface:rw
-      - ${MODELS_DIR:-~/.cache/kanoa/models}:/models:ro
     environment:
       - CUDA_VISIBLE_DEVICES=0
       - HF_HOME=/root/.cache/huggingface

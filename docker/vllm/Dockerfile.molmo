@@ -1,5 +1,0 @@
-FROM vllm/vllm-openai:latest
-
-# Install tensorflow as required by Molmo's HF processor
-# Install bitsandbytes for 4-bit quantization (memory optimization)
-RUN pip install tensorflow bitsandbytes

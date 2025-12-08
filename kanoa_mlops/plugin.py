@@ -117,8 +117,9 @@ def resolve_mlops_path() -> Path | None:
 
     # Check if running from development repo
     repo_root = Path(__file__).resolve().parent.parent
-    if (repo_root / "docker" / "ollama").exists():
-        return repo_root
+    templates_docker = repo_root / "kanoa_mlops" / "templates" / "docker"
+    if (templates_docker / "ollama").exists():
+        return templates_docker.parent  # Return templates/ directory
 
     return None
 
