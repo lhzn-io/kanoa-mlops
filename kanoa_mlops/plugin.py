@@ -82,16 +82,39 @@ def run_docker_compose(
         subprocess.run(cmd, check=True)
         return True
     except subprocess.CalledProcessError:
-        # If 'docker compose' fails, it might be because the plugin is missing
-        # or the command failed for another reason.
-        # Let's try checking if 'docker compose' is valid.
-        pass
+        # Check if the failure was due to missing plugin
+        is_plugin_missing = False
+        try:
+            subprocess.run(
+                ["docker", "compose", "version"],
+                check=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+        except subprocess.CalledProcessError:
+            is_plugin_missing = True
+
+        if not is_plugin_missing:
+            # It failed for a real reason (e.g. config error), don't retry with v1
+            return False
+
+        # Plugin is missing, print helpful message
+        console.print(
+            "[yellow]Warning: 'docker compose' (v2) command not found.[/yellow]"
+        )
+        console.print("It looks like the Docker Compose plugin is missing.")
+        console.print("To install on Ubuntu/Debian:")
+        console.print(
+            "  [bold]sudo apt-get update && sudo apt-get install docker-compose-v2[/bold]"
+        )
+        console.print("")
+        console.print("Attempting fallback to legacy 'docker-compose' (v1)...")
+
     except FileNotFoundError:
         console.print("[red]Error: docker not found. Please install Docker.[/red]")
         return False
 
     # Fallback: Try 'docker-compose' (standalone v1)
-    console.print("[yellow]Warning: 'docker compose' failed. Trying 'docker-compose'...[/yellow]")
     cmd = ["docker-compose", "-f", str(compose_file), action]
     if action == "up" and detach:
         cmd.append("-d")
