@@ -4,10 +4,10 @@
 
 `kanoa-mlops` provides the local compute layer for the [`kanoa`](https://github.com/lhzn-io/kanoa) library — enabling you to interpret data science outputs (plots, tables, models) using state-of-the-art vision-language models, all running on your own hardware.
 
-- 🔒 **Privacy First** — Your data never leaves your machine
-- 🎯 **Multiple Backends** — Choose Ollama (easy), vLLM (fast), or cloud GPU (scalable)
-- 📊 **Full Observability** — Prometheus + Grafana + NVIDIA DCGM monitoring stack
-- 🔌 **Seamless Integration** — Extends `kanoa` CLI with `serve` and `stop` commands
+- **Privacy First** — Your data never leaves your machine
+- **Multiple Backends** — Choose Ollama (easy), vLLM (fast), or cloud GPU (scalable)
+- **Full Observability** — Prometheus + Grafana + NVIDIA DCGM monitoring stack
+- **Seamless Integration** — Extends `kanoa` CLI with `serve` and `stop` commands
 
 ## Quick Start
 
