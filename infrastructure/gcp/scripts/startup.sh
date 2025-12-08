@@ -165,10 +165,10 @@ while true; do
 
     if [ "$IDLE_SECONDS" -ge "$IDLE_TIMEOUT_SECONDS" ]; then
         log "Idle for $IDLE_MINUTES minutes (threshold: $IDLE_TIMEOUT_MINUTES), initiating shutdown"
-        
+
         # Stop vLLM container gracefully
         docker stop kanoa-vllm || true
-        
+
         # Shutdown the VM
         shutdown -h now "Idle shutdown after $IDLE_MINUTES minutes of inactivity"
         exit 0

@@ -6,7 +6,7 @@ Guide for contributors adding support for new vision-language or text models.
 
 Adding a new model involves:
 1. Creating a docker-compose configuration
-2. Testing the model locally  
+2. Testing the model locally
 3. Adding Makefile targets (optional)
 4. Updating documentation
 

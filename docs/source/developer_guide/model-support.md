@@ -91,18 +91,18 @@ TEST_METRICS = []
 def query_ollama(prompt, max_tokens=200, temperature=0.7):
     """Query the Ollama model via OpenAI-compatible API."""
     headers = {"Content-Type": "application/json"}
-    
+
     data = {
         "model": MODEL_NAME,
         "messages": [{"role": "user", "content": prompt}],
         "max_tokens": max_tokens,
         "temperature": temperature
     }
-    
+
     start_time = time.time()
     response = requests.post(API_URL, headers=headers, json=data)
     duration_s = time.time() - start_time
-    
+
     response.raise_for_status()
     result = response.json()
     return result['choices'][0]['message']['content'], result.get('usage', {}), duration_s
@@ -114,7 +114,7 @@ def test_api_health():
         resp = requests.get(OLLAMA_BASE_URL)
         if resp.status_code == 200:
             print("[OK] Ollama is running.")
-        
+
         resp = requests.get(f"{OLLAMA_BASE_URL}/api/tags")
         resp.raise_for_status()
         print("[PASS] API health test passed")
@@ -126,10 +126,10 @@ def test_basic_chat():
     """Test basic chat functionality."""
     print("\\n[TEST] Testing Basic Chat...")
     prompt = "What is the capital of France?"
-    
+
     response, usage, duration = query_ollama(prompt, max_tokens=50, temperature=0.1)
     print(f"[OK] Response:\\n{response}")
-    
+
     tokens_generated = usage.get('completion_tokens', 0)
     tokens_per_sec = tokens_generated / duration if duration > 0 else 0
     TEST_METRICS.append(TestMetrics(
@@ -139,7 +139,7 @@ def test_basic_chat():
         tokens_per_second=tokens_per_sec,
         prompt_tokens=usage.get('prompt_tokens', 0)
     ))
-    
+
     print(f"[PERF] {duration:.2f}s | {tokens_generated} tokens | {tokens_per_sec:.1f} tok/s")
     assert "Paris" in response or "paris" in response, "Expected 'Paris' in response"
     print("[PASS] Basic chat test passed")
@@ -149,10 +149,10 @@ def test_reasoning():
     print("\\n[TEST] Testing Reasoning...")
     prompt = """A farmer has 17 sheep, and all but 9 die. How many sheep are left?
 Think step by step."""
-    
+
     response, usage, duration = query_ollama(prompt, max_tokens=200, temperature=0.1)
     print(f"[OK] Response:\\n{response}")
-    
+
     tokens_generated = usage.get('completion_tokens', 0)
     tokens_per_sec = tokens_generated / duration if duration > 0 else 0
     TEST_METRICS.append(TestMetrics(
@@ -162,7 +162,7 @@ Think step by step."""
         tokens_per_second=tokens_per_sec,
         prompt_tokens=usage.get('prompt_tokens', 0)
     ))
-    
+
     print(f"[PERF] {duration:.2f}s | {tokens_generated} tokens | {tokens_per_sec:.1f} tok/s")
     print("[PASS] Reasoning test passed")
 
@@ -170,39 +170,39 @@ def print_performance_report():
     """Print formatted performance report."""
     if not TEST_METRICS:
         return
-    
+
     print("\\n" + "="*70)
     print("PERFORMANCE REPORT")
     print("="*70)
-    
+
     total_tokens = sum(m.tokens_generated for m in TEST_METRICS)
     total_duration = sum(m.duration_s for m in TEST_METRICS)
     avg_tokens_per_sec = total_tokens / total_duration if total_duration > 0 else 0
-    
+
     print(f"\\nOverall Statistics:")
     print(f"  Total Tokens Generated: {total_tokens}")
     print(f"  Total Duration: {total_duration:.2f}s")
     print(f"  Average Throughput: {avg_tokens_per_sec:.1f} tokens/s")
-    
+
     print(f"\\nPer-Test Results:")
     print(f"{'Test Name':<25} {'Duration':<12} {'Tokens':<10} {'Tok/s':<10}")
     print("-" * 70)
     for metric in TEST_METRICS:
         print(f"{metric.test_name:<25} {metric.duration_s:>8.2f}s    {metric.tokens_generated:>6}     {metric.tokens_per_second:>6.1f}")
-    
+
     print("="*70)
 
 def export_results_json(filename="benchmark_results_olmo3.json"):
     """Export results to JSON for further analysis."""
     if not TEST_METRICS:
         return
-    
+
     try:
         with open('/proc/driver/nvidia/version', 'r') as f:
             nvidia_version = f.readline().strip()
     except Exception:
         nvidia_version = "unknown"
-    
+
     results = {
         "timestamp": datetime.now().isoformat(),
         "model": MODEL_NAME,
@@ -221,24 +221,24 @@ def export_results_json(filename="benchmark_results_olmo3.json"):
         },
         "tests": [asdict(m) for m in TEST_METRICS]
     }
-    
+
     with open(filename, 'w') as f:
         json.dump(results, f, indent=2)
-    
+
     print(f"\\n[INFO] Benchmark results exported to: {filename}")
 
 if __name__ == "__main__":
     print(f"[INFO] Starting Integration Tests for {MODEL_NAME} on Ollama...")
     print(f"[INFO] API URL: {API_URL}")
-    
+
     try:
         test_api_health()
         test_basic_chat()
         test_reasoning()
-        
+
         print_performance_report()
         export_results_json()
-        
+
         print("\\n" + "="*70)
         print("[SUCCESS] All integration tests passed!")
         print("="*70)
@@ -272,11 +272,11 @@ def run_single_benchmark():
         text=True,
         cwd=Path(__file__).parent
     )
-    
+
     if result.returncode != 0:
         print(f"[ERROR] Benchmark failed: {result.stderr}")
         return None
-    
+
     try:
         with open(Path(__file__).parent / "benchmark_results_olmo3.json", "r") as f:
             return json.load(f)
@@ -287,33 +287,33 @@ def run_single_benchmark():
 def main():
     num_runs = 3
     results = []
-    
+
     print(f"Running {num_runs} benchmark iterations for OLMo-3...\\n")
-    
+
     for i in range(num_runs):
         print(f"[{i+1}/{num_runs}] Running benchmark...")
         result = run_single_benchmark()
-        
+
         if result:
             results.append(result)
             print(f"  ✓ Completed: {result['summary']['total_tokens']} tokens in {result['summary']['total_duration_s']:.1f}s")
             print(f"    Throughput: {result['summary']['avg_tokens_per_second']:.1f} tok/s\\n")
         else:
             print("  ✗ Failed\\n")
-        
+
         if i < num_runs - 1:
             time.sleep(2)
-    
+
     if not results:
         print("[ERROR] No successful runs")
         return
-    
+
     # Compute statistics
     print("="*70)
     print("OLMO-3 BENCHMARK STATISTICS")
     print("="*70)
     print(f"\\nRuns completed: {len(results)}")
-    
+
     throughputs = [r['summary']['avg_tokens_per_second'] for r in results]
     print("\\nOverall Throughput:")
     print(f"  Mean:   {mean(throughputs):.1f} tok/s")
@@ -321,7 +321,7 @@ def main():
         print(f"  StdDev: {stdev(throughputs):.1f} tok/s")
         print(f"  Min:    {min(throughputs):.1f} tok/s")
         print(f"  Max:    {max(throughputs):.1f} tok/s")
-    
+
     # Save aggregated results
     aggregated = {
         "num_runs": len(results),
@@ -338,10 +338,10 @@ def main():
         },
         "raw_results": results
     }
-    
+
     with open("benchmark_statistics_olmo3.json", "w") as f:
         json.dump(aggregated, f, indent=2)
-    
+
     print("\\n[INFO] Statistics saved to: benchmark_statistics_olmo3.json")
 
 if __name__ == "__main__":

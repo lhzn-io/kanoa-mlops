@@ -13,7 +13,7 @@ project_id = "your-gcp-project-id"
 allowed_source_ranges = ["YOUR_IP/32"]
 
 # Optional: Region and zone
-# See available zones with L4 GPUs: 
+# See available zones with L4 GPUs:
 # gcloud compute accelerator-types list --filter="name=nvidia-l4"
 region = "us-central1"
 zone   = "us-central1-a"

@@ -24,7 +24,7 @@ Before running these notebooks:
    ```bash
    # macOS
    brew install terraform
-   
+
    # Linux
    # See https://developer.hashicorp.com/terraform/install
    ```

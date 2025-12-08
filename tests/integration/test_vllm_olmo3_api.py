@@ -134,7 +134,7 @@ def test_complex_reasoning_multistep():
 
 A bakery makes 300 loaves of bread per day. Each loaf requires:
 - 500g flour
-- 300ml water  
+- 300ml water
 - 10g salt
 - 5g yeast
 
@@ -213,7 +213,7 @@ Only return the JSON, no additional text."""
     print(
         f"[PERF] {duration:.2f}s | {tokens_generated} tokens | {tokens_per_sec:.1f} tok/s"
     )
-    
+
     # Try to parse JSON
     try:
         # Extract JSON from response if it contains extra text
@@ -356,7 +356,9 @@ if __name__ == "__main__":
     print("[INFO] Starting Integration Tests for Olmo3 32B Think...")
     print(f"[INFO] Model: {MODEL_NAME}")
     print(f"[INFO] API URL: {API_URL}")
-    print("[INFO] Testing code generation, reasoning, and structured output capabilities")
+    print(
+        "[INFO] Testing code generation, reasoning, and structured output capabilities"
+    )
 
     try:
         # API Health

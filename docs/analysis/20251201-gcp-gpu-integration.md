@@ -277,20 +277,20 @@ LAST_ACTIVITY=$(date +%s)
 while true; do
     # Check for recent requests via Docker logs
     RECENT=$(docker logs --since=1m kanoa-vllm 2>&1 | grep -c "POST\|GET" || echo 0)
-    
+
     if [ "$RECENT" -gt 0 ]; then
         LAST_ACTIVITY=$(date +%s)
     fi
-    
+
     NOW=$(date +%s)
     IDLE=$((NOW - LAST_ACTIVITY))
     IDLE_MIN=$((IDLE / 60))
-    
+
     if [ "$IDLE_MIN" -ge "$IDLE_TIMEOUT" ]; then
         echo "$(date): Idle for $IDLE_MIN min, shutting down"
         sudo shutdown -h now
     fi
-    
+
     sleep 60
 done
 EOF
