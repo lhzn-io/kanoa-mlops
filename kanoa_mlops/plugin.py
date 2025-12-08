@@ -20,17 +20,16 @@ try:
 
     console = Console()
 except ImportError:
+    import re
 
-    class Console:
+    class _FallbackConsole:
         def print(self, *args, **kwargs):
             # Strip rich markup for plain print
             text = str(args[0]) if args else ""
-            import re
-
             text = re.sub(r"\[/?[a-z ]+\]", "", text)
             print(text, **kwargs)
 
-    console = Console()
+    console = _FallbackConsole()  # type: ignore[assignment]
 
 
 def get_templates_path() -> Path:
@@ -160,11 +159,12 @@ def handle_serve(args) -> None:
                     f"[yellow]Skipping {name}: compose file not found[/yellow]"
                 )
     else:
-        compose_file = service_map.get(service)
+        compose_file: Path | None = service_map.get(service)  # type: ignore[no-redef]
         if not compose_file or not compose_file.exists():
             console.print(f"[red]Error: {service} compose file not found.[/red]")
             sys.exit(1)
 
+        # Type narrowing: compose_file is Path here
         console.print(f"[blue]Starting {service}...[/blue]")
         if not run_docker_compose(compose_file, "up"):
             console.print(f"[red]Failed to start {service}[/red]")
@@ -201,8 +201,8 @@ def handle_stop(args) -> None:
                 console.print(f"[blue]Stopping {name}...[/blue]")
                 run_docker_compose(compose_file, "down")
     else:
-        compose_file = service_map.get(service)
-        if compose_file and compose_file.exists():
+        compose_file: Path | None = service_map.get(service)  # type: ignore[no-redef]
+        if compose_file is not None and compose_file.exists():
             console.print(f"[blue]Stopping {service}...[/blue]")
             run_docker_compose(compose_file, "down")
 
@@ -214,6 +214,31 @@ def handle_restart(args) -> None:
     # Stop then start
     handle_stop(args)
     handle_serve(args)
+
+
+def get_initialized_services(mlops_path: Path) -> dict[str, Path]:
+    """Return a map of {service_name: compose_file_path} for initialized services."""
+    docker_dir = mlops_path / "docker"
+    services = {}
+
+    # Check known services
+    candidates = {
+        "ollama": docker_dir / "ollama" / "docker-compose.ollama.yml",
+        "monitoring": docker_dir / "monitoring" / "docker-compose.yml",
+    }
+
+    # Check vLLM templates if present
+    vllm_dir = docker_dir / "vllm"
+    if vllm_dir.exists():
+        for f in vllm_dir.glob("docker-compose.*.yml"):
+            name = f.stem.replace("docker-compose.", "")  # e.g. 'molmo' or 'gemma'
+            services[f"vllm-{name}"] = f
+
+    for name, path in candidates.items():
+        if path.exists():
+            services[name] = path
+
+    return services
 
 
 def handle_status(args) -> None:
@@ -232,19 +257,86 @@ def handle_status(args) -> None:
 
     # Check docker services
     console.print("")
-    console.print("[bold]Services:[/bold]")
+    console.print("[bold]Running Containers:[/bold]")
 
     try:
         result = subprocess.run(
-            ["docker", "ps", "--format", "{{.Names}}\t{{.Status}}"],
+            ["docker", "ps", "--format", "table {{.Names}}\t{{.Status}}\t{{.Ports}}"],
             capture_output=True,
             text=True,
         )
-        for line in result.stdout.strip().split("\n"):
-            if line and "kanoa" in line.lower():
-                console.print(f"  {line}")
+
+        has_running = False
+        lines = result.stdout.strip().split("\n")
+        if len(lines) > 1:  # Header + at least one container
+            for line in lines[1:]:
+                if "kanoa" in line.lower():
+                    console.print(f"  {line}")
+                    has_running = True
+
+        if not has_running:
+            console.print("  [dim]No kanoa services running[/dim]")
+
     except FileNotFoundError:
         console.print("  [yellow]Docker not available[/yellow]")
+
+
+def handle_list(args) -> None:
+    """List available services and models."""
+    mlops_path = resolve_mlops_path()
+    if not mlops_path:
+        console.print("[red]Error: kanoa-mlops not initialized.[/red]")
+        return
+
+    console.print("[bold]Available Services:[/bold]")
+    services = get_initialized_services(mlops_path)
+    if not services:
+        console.print("  [dim]No services found in docker/ directory[/dim]")
+    else:
+        for name, path in services.items():
+            console.print(f"  • {name:<15} [dim]({path.relative_to(mlops_path)})[/dim]")
+
+    console.print("")
+    console.print("[bold]Ollama Models:[/bold]")
+
+    # Check if Ollama is running first
+    try:
+        # Try to list models via docker exec
+        result = subprocess.run(
+            [
+                "docker",
+                "compose",
+                "-f",
+                str(services["ollama"]),
+                "exec",
+                "ollama",
+                "ollama",
+                "list",
+            ],
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode == 0:
+            models = result.stdout.strip().split("\n")
+            if len(models) > 1:  # Header + models
+                for model in models[1:]:
+                    console.print(f"  • {model}")
+            else:
+                console.print("  [dim]No models pulled[/dim]")
+        else:
+            console.print(
+                "  [yellow]Ollama not running (start with `kanoa serve ollama`)[/yellow]"
+            )
+    except (KeyError, FileNotFoundError, subprocess.CalledProcessError):
+        console.print(
+            "  [dim]Ollama service not configured or Docker unavailable[/dim]"
+        )
+
+    console.print("")
+    console.print("[bold]vLLM Models:[/bold]")
+    console.print(
+        "  [dim](Check docker/vllm/docker-compose.*.yml for configured models)[/dim]"
+    )
 
 
 # =============================================================================
@@ -317,6 +409,10 @@ def register(parser) -> None:
 
     # status command
     status_parser = parser.add_parser(
-        "status", help="Show kanoa-mlops configuration and service status"
+        "status", help="Show configuration and running services"
     )
     status_parser.set_defaults(func=handle_status)
+
+    # list command
+    list_parser = parser.add_parser("list", help="List available services and models")
+    list_parser.set_defaults(func=handle_list)
