@@ -520,6 +520,6 @@ vllm serve <model> --gpu-memory-utilization 0.7
 
 ## See Also
 
-- [Quickstart Guide](quickstart.md)
-- [Benchmarking Guide](../tests/integration/README.md)
+- [Quickstart Guide](../user_guide/quickstart.md)
+- [Benchmarking Guide](../../../tests/integration/README.md)
 - [Contributing Guide](contributing.md)

@@ -326,6 +326,6 @@ Thank you for contributing to kanoa-mlops! 🚀
 ## See Also
 
 - [Model Support Guide](model-support.md)
-- [Quickstart Guide](quickstart.md)
-- [Benchmarking Guide](../tests/integration/README.md)
-- [Code of Conduct](../../CODE_OF_CONDUCT.md)
+- [Quickstart Guide](../user_guide/quickstart.md)
+- [Benchmarking Guide](../../../tests/integration/README.md)
+- [Code of Conduct](../../../CODE_OF_CONDUCT.md)

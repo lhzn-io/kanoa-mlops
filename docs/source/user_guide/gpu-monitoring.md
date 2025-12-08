@@ -113,7 +113,7 @@ The stack includes:
 - Real-time GPU cache, throughput, and latency monitoring
 - Support for remote endpoints (GCP, Azure, on-prem)
 
-For full documentation, see the [Monitoring Stack README](../../monitoring/README.md).
+For full documentation, see the [Monitoring Stack README](../../../monitoring/README.md).
 
 ### vLLM Metrics Reference
 

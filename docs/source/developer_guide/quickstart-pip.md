@@ -97,9 +97,9 @@ kanoa serve monitoring
 
 ## Next Steps
 
-- [Local GPU Setup Guide](local-gpu-setup.md) — Platform-specific instructions
-- [Monitoring Guide](../monitoring/README.md) — Dashboard deep-dive
-- [vLLM Tuning](../docker/vllm/README.md) — Model configuration
+- [Local GPU Setup Guide](../user_guide/local-gpu-setup.md) — Platform-specific instructions
+- [Monitoring Guide](../../../monitoring/README.md) — Dashboard deep-dive
+- [vLLM Tuning](../../../docker/vllm/README.md) — Model configuration
 
 ## Troubleshooting
 

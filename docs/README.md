@@ -1,8 +1,20 @@
 # kanoa-mlops Documentation
 
-This directory contains planning documents and analysis for the `kanoa-mlops` infrastructure.
+This directory contains the documentation for the `kanoa-mlops` infrastructure.
 
 ## Structure
+
+### `source/` (Sphinx Documentation)
+
+The official documentation is built using Sphinx from the files in `source/`.
+To build the documentation locally:
+
+```bash
+cd docs
+make html
+```
+
+The built HTML files will be in `build/html/`.
 
 ### `planning/`
 

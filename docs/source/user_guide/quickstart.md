@@ -155,7 +155,7 @@ python3 run_benchmark_suite_ollama.py
 python3 run_benchmark_suite.py
 ```
 
-See [Benchmarking Guide](../tests/integration/README.md) for detailed usage.
+See [Benchmarking Guide](../../../tests/integration/README.md) for detailed usage.
 
 ## Stopping Services
 
@@ -169,8 +169,8 @@ docker compose -f docker/monitoring/docker-compose.yml down
 
 ## Next Steps
 
-- **[Model Support Guide](model-support.md)**: Add support for new models
-- **[Contributing Guide](contributing.md)**: Contribute your benchmark results
+- **[Model Support Guide](../developer_guide/model-support.md)**: Add support for new models
+- **[Contributing Guide](../developer_guide/contributing.md)**: Contribute your benchmark results
 - **[Performance Analysis](performance-analysis.md)**: Optimize your setup
 - **[GPU Monitoring](gpu-monitoring.md)**: Deep dive into metrics
 
