@@ -324,7 +324,7 @@ def export_results_json(filename="benchmark_results_olmo3.json"):
     try:
         with open("/proc/driver/nvidia/version", "r") as f:
             nvidia_version = f.readline().strip()
-    except (FileNotFoundError, PermissionError):
+    except Exception:
         nvidia_version = "unknown"
 
     results = {
