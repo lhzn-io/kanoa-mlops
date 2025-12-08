@@ -1,14 +1,13 @@
+import subprocess
 from pathlib import Path
 from unittest.mock import MagicMock, patch
-import subprocess
-import pytest
 
 from kanoa_mlops.plugin import (
+    _detect_compose_client,
+    _image_exists,
+    _parse_images_from_compose,
     get_templates_path,
     resolve_mlops_path,
-    _detect_compose_client,
-    _parse_images_from_compose,
-    _image_exists,
 )
 
 
@@ -28,7 +27,7 @@ def test_resolve_mlops_path_from_config(mock_get_config):
     # Mock Path.exists to return True for the expected path
     with patch("pathlib.Path.exists") as mock_exists:
         mock_exists.return_value = True
-        
+
         result = resolve_mlops_path()
         assert result == expected_path
 
@@ -63,15 +62,21 @@ def test_resolve_mlops_path_none(mock_get_config):
 
 # --- New Tests ---
 
+
 @patch("subprocess.run")
 def test_detect_compose_client_plugin(mock_run):
     """Test detection of 'docker compose' plugin."""
     # Simulate success for 'docker compose version'
     mock_run.return_value.returncode = 0
-    
+
     client = _detect_compose_client()
     assert client == ["docker", "compose"]
-    mock_run.assert_called_with(["docker", "compose", "version"], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    mock_run.assert_called_with(
+        ["docker", "compose", "version"],
+        check=False,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
 
 
 @patch("subprocess.run")
@@ -79,7 +84,7 @@ def test_detect_compose_client_standalone(mock_run):
     """Test detection of 'docker-compose' standalone."""
     # Simulate failure for 'docker compose version'
     # Simulate success for 'docker-compose --version'
-    
+
     def side_effect(cmd, **kwargs):
         res = MagicMock()
         if cmd == ["docker", "compose", "version"]:
@@ -89,9 +94,9 @@ def test_detect_compose_client_standalone(mock_run):
         else:
             res.returncode = 1
         return res
-    
+
     mock_run.side_effect = side_effect
-    
+
     client = _detect_compose_client()
     assert client == ["docker-compose"]
 
@@ -100,7 +105,7 @@ def test_detect_compose_client_standalone(mock_run):
 def test_detect_compose_client_none(mock_run):
     """Test when no compose client is found."""
     mock_run.return_value.returncode = 1
-    
+
     client = _detect_compose_client()
     assert client is None
 
@@ -114,14 +119,14 @@ services:
     image: my-app:latest
     build: .
   db:
-    image:  postgres:15-alpine 
+    image:  postgres:15-alpine
   redis:
     # image: commented-out
     image: redis:7
 """
     f = tmp_path / "docker-compose.yml"
     f.write_text(compose_content)
-    
+
     images = _parse_images_from_compose(f)
     assert "my-app:latest" in images
     assert "postgres:15-alpine" in images
@@ -133,14 +138,16 @@ services:
 def test_image_exists_true(mock_run):
     """Test _image_exists when image is present."""
     mock_run.return_value.stdout = "sha256:12345..."
-    
+
     assert _image_exists("my-image:latest") is True
-    mock_run.assert_called_with(["docker", "images", "-q", "my-image:latest"], capture_output=True, text=True)
+    mock_run.assert_called_with(
+        ["docker", "images", "-q", "my-image:latest"], capture_output=True, text=True
+    )
 
 
 @patch("subprocess.run")
 def test_image_exists_false(mock_run):
     """Test _image_exists when image is missing."""
     mock_run.return_value.stdout = ""
-    
+
     assert _image_exists("missing:latest") is False

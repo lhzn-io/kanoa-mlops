@@ -3,6 +3,7 @@ Architecture detection utilities for kanoa-mlops.
 
 Detects hardware platform and selects appropriate container images.
 """
+
 import platform
 import subprocess
 from dataclasses import dataclass

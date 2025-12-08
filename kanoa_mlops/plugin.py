@@ -7,9 +7,12 @@ Supports both:
   2. PyPI install mode (templates copied via `kanoa init mlops`)
 """
 
+import re
 import shutil
 import subprocess
 import sys
+import urllib.error
+import urllib.request
 from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
@@ -17,8 +20,6 @@ from rich.console import Console
 
 from kanoa_mlops.arch_detect import detect_architecture
 from kanoa_mlops.config import get_mlops_path, get_templates_path, set_mlops_path
-
-import re
 
 console = Console()
 
@@ -31,14 +32,24 @@ def _detect_compose_client() -> list[str] | None:
     """
     try:
         # Prefer 'docker compose' (plugin)
-        rc = subprocess.run(["docker", "compose", "version"], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        rc = subprocess.run(
+            ["docker", "compose", "version"],
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
         if rc.returncode == 0:
             return ["docker", "compose"]
     except FileNotFoundError:
         pass
 
     try:
-        rc = subprocess.run(["docker-compose", "--version"], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        rc = subprocess.run(
+            ["docker-compose", "--version"],
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
         if rc.returncode == 0:
             return ["docker-compose"]
     except FileNotFoundError:
@@ -70,10 +81,13 @@ def _parse_images_from_compose(compose_file: Path) -> list[str]:
 def _image_exists(image: str) -> bool:
     """Return True if a Docker image with this name:tag exists locally."""
     try:
-        result = subprocess.run(["docker", "images", "-q", image], capture_output=True, text=True)
+        result = subprocess.run(
+            ["docker", "images", "-q", image], capture_output=True, text=True
+        )
         return bool(result.stdout.strip())
     except FileNotFoundError:
         return False
+
 
 # Rich for CLI output (graceful fallback if not available)
 try:
@@ -91,11 +105,6 @@ except ImportError:
             print(text, **kwargs)
 
     console = _FallbackConsole()  # type: ignore[assignment]
-
-
-def get_templates_path() -> Path:
-    """Get the path to bundled templates in the package."""
-    return Path(__file__).parent / "templates"
 
 
 def resolve_mlops_path() -> Path | None:
@@ -118,7 +127,9 @@ def resolve_mlops_path() -> Path | None:
         if p.exists():
             return p.resolve()
         else:
-            console.print(f"[yellow]Warning: configured mlops path does not exist: {p}[/yellow]")
+            console.print(
+                f"[yellow]Warning: configured mlops path does not exist: {p}[/yellow]"
+            )
             # fall through to dev-mode detection
 
     # Check if running from development repo
@@ -146,10 +157,12 @@ def run_docker_compose(
     """
     # Build the command using the detected compose client
     if COMPOSE_CMD is None:
-        console.print("[red]Error: No Docker Compose client found (docker compose or docker-compose)[/red]")
+        console.print(
+            "[red]Error: No Docker Compose client found (docker compose or docker-compose)[/red]"
+        )
         return False
 
-    cmd = COMPOSE_CMD + ["-f", str(compose_file), action]
+    cmd = [*COMPOSE_CMD, "-f", str(compose_file), action]
     if action == "up" and detach:
         cmd.append("-d")
 
@@ -195,13 +208,13 @@ def run_docker_compose(
 
 def _ignore_jinja_templates(dir, files):
     """Ignore .j2 template files during copytree."""
-    return [f for f in files if f.endswith('.j2')]
+    return [f for f in files if f.endswith(".j2")]
 
 
 def _render_templates(templates_dir: Path, target_dir: Path, arch_config):
     """
     Render Jinja2 templates with architecture-specific values.
-    
+
     Args:
         templates_dir: Source templates directory
         target_dir: Target output directory
@@ -209,20 +222,20 @@ def _render_templates(templates_dir: Path, target_dir: Path, arch_config):
     """
     env = Environment(
         loader=FileSystemLoader(templates_dir),
-        autoescape=select_autoescape(['html', 'xml']),
+        autoescape=select_autoescape(["html", "xml"]),
         trim_blocks=True,
         lstrip_blocks=True,
     )
-    
+
     # Find all .j2 template files
     for template_file in templates_dir.rglob("*.j2"):
         rel_path = template_file.relative_to(templates_dir)
-        output_path = target_dir / str(rel_path).rstrip('.j2')
-        
+        output_path = target_dir / str(rel_path).rstrip(".j2")
+
         # Render template
         template = env.get_template(str(rel_path))
         rendered = template.render(arch_config=arch_config)
-        
+
         # Write output
         output_path.parent.mkdir(parents=True, exist_ok=True)
         output_path.write_text(rendered)
@@ -274,13 +287,17 @@ def handle_init(args) -> None:
 
     try:
         # Copy static files (non-.j2)
-        shutil.copytree(docker_src, docker_dst, dirs_exist_ok=True, ignore=_ignore_jinja_templates)
-        
+        shutil.copytree(
+            docker_src, docker_dst, dirs_exist_ok=True, ignore=_ignore_jinja_templates
+        )
+
         # Render Jinja2 templates
         _render_templates(templates_dir, target_dir, arch_config)
-        
+
     except PermissionError:
-        console.print(f"[red]Error: Permission denied copying templates to {docker_dst}[/red]")
+        console.print(
+            f"[red]Error: Permission denied copying templates to {docker_dst}[/red]"
+        )
         sys.exit(1)
     except Exception as e:
         console.print(f"[red]Error: Failed to copy templates: {e}[/red]")
@@ -323,7 +340,9 @@ def handle_serve(args) -> None:
     if service == "all":
         for name, compose_file in service_map.items():
             if not compose_file.exists():
-                console.print(f"[yellow]Skipping {name}: compose file not found[/yellow]")
+                console.print(
+                    f"[yellow]Skipping {name}: compose file not found[/yellow]"
+                )
                 continue
 
             console.print(f"[blue]Starting {name}...[/blue]")
@@ -336,12 +355,18 @@ def handle_serve(args) -> None:
                     f"[yellow]Detected missing images for {name}: {', '.join(missing)}. Building first...[/yellow]"
                 )
                 if COMPOSE_CMD is None:
-                    console.print("[red]Error: No Docker Compose client available to build images.[/red]")
+                    console.print(
+                        "[red]Error: No Docker Compose client available to build images.[/red]"
+                    )
                     continue
                 try:
-                    subprocess.run(COMPOSE_CMD + ["-f", str(compose_file), "build"], check=True)
+                    subprocess.run(
+                        [*COMPOSE_CMD, "-f", str(compose_file), "build"], check=True
+                    )
                 except subprocess.CalledProcessError:
-                    console.print(f"[red]Failed to build images for {name}, skipping start.[/red]")
+                    console.print(
+                        f"[red]Failed to build images for {name}, skipping start.[/red]"
+                    )
                     continue
 
             run_docker_compose(compose_file, "up")
@@ -359,12 +384,18 @@ def handle_serve(args) -> None:
         images = _parse_images_from_compose(compose_file)
         missing = [img for img in images if not _image_exists(img)]
         if missing:
-            console.print(f"[yellow]Detected missing images: {', '.join(missing)}. Building first...[/yellow]")
+            console.print(
+                f"[yellow]Detected missing images: {', '.join(missing)}. Building first...[/yellow]"
+            )
             if COMPOSE_CMD is None:
-                console.print("[red]Error: No Docker Compose client available to build images.[/red]")
+                console.print(
+                    "[red]Error: No Docker Compose client available to build images.[/red]"
+                )
                 sys.exit(1)
             try:
-                subprocess.run(COMPOSE_CMD + ["-f", str(compose_file), "build"], check=True)
+                subprocess.run(
+                    [*COMPOSE_CMD, "-f", str(compose_file), "build"], check=True
+                )
             except subprocess.CalledProcessError:
                 console.print(f"[red]Failed to build images for {service}[/red]")
                 sys.exit(1)
@@ -466,6 +497,16 @@ def get_initialized_services(mlops_path: Path) -> dict[str, Path]:
     return services
 
 
+def _check_url(url: str) -> bool:
+    """Check if a URL is reachable and returns 200 OK."""
+    try:
+        req = urllib.request.Request(url, method="GET")
+        with urllib.request.urlopen(req, timeout=1) as response:
+            return response.status == 200
+    except Exception:
+        return False
+
+
 def handle_status(args) -> None:
     """Show current configuration and running services."""
     mlops_path = resolve_mlops_path()
@@ -484,6 +525,10 @@ def handle_status(args) -> None:
     console.print("")
     console.print("[bold]Running Containers:[/bold]")
 
+    ollama_running = False
+    vllm_running = False
+    has_running = False
+
     try:
         result = subprocess.run(
             ["docker", "ps", "--format", "table {{.Names}}\t{{.Status}}\t{{.Ports}}"],
@@ -491,19 +536,48 @@ def handle_status(args) -> None:
             text=True,
         )
 
-        has_running = False
         lines = result.stdout.strip().split("\n")
         if len(lines) > 1:  # Header + at least one container
             for line in lines[1:]:
                 if "kanoa" in line.lower():
                     console.print(f"  {line}")
                     has_running = True
+                    if "ollama" in line.lower():
+                        ollama_running = True
+                    if "vllm" in line.lower():
+                        vllm_running = True
 
         if not has_running:
             console.print("  [dim]No kanoa services running[/dim]")
 
     except FileNotFoundError:
         console.print("  [yellow]Docker not available[/yellow]")
+
+    # Check Endpoints
+    console.print("")
+    console.print("[bold]Service Endpoints:[/bold]")
+
+    if not has_running:
+        console.print("  [dim]No active services to check[/dim]")
+        return
+
+    # Ollama
+    if ollama_running:
+        ollama_url = "http://localhost:11434/"
+        if _check_url(ollama_url):
+            console.print(f"  [green]✔ Ollama API[/green]     {ollama_url}")
+        else:
+            console.print(f"  [dim]✘ Ollama API[/dim]     {ollama_url} (Unreachable)")
+
+    # vLLM
+    if vllm_running:
+        vllm_url = "http://localhost:8000/health"
+        if _check_url(vllm_url):
+            console.print("  [green]✔ vLLM API[/green]       http://localhost:8000")
+        else:
+            console.print(
+                "  [dim]✘ vLLM API[/dim]       http://localhost:8000 (Unreachable)"
+            )
 
 
 def handle_list(args) -> None:
@@ -538,7 +612,15 @@ def handle_list(args) -> None:
 
         # Try to list models via docker exec
         result = subprocess.run(
-            COMPOSE_CMD + ["-f", str(ollama_compose), "exec", "ollama", "ollama", "list"],
+            [
+                *COMPOSE_CMD,
+                "-f",
+                str(ollama_compose),
+                "exec",
+                "ollama",
+                "ollama",
+                "list",
+            ],
             capture_output=True,
             text=True,
         )

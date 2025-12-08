@@ -55,3 +55,6 @@ temp/
 benchmark_*.json
 benchmark_*.txt
 tests/integration/benchmark_*.json
+
+# local compose files (kanoa init mlops build artifacts)
+docker/
