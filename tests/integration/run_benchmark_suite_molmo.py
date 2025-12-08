@@ -12,7 +12,7 @@ def run_single_benchmark():
     """Run a single benchmark and return results."""
     result = subprocess.run(
         ["python3", "test_vllm_molmo_api.py"],
-        capture_output=True,
+        capture_output=False,
         text=True,
         cwd=Path(__file__).parent,
     )
@@ -22,12 +22,13 @@ def run_single_benchmark():
         return None
 
     # Load the results
-    with open("benchmark_results.json", "r") as f:
+    results_path = Path(__file__).parent / "benchmark_results.json"
+    with open(results_path, "r") as f:
         return json.load(f)
 
 
 def main():
-    num_runs = 3
+    num_runs = 10
     results = []
 
     print(f"Running {num_runs} benchmark iterations for Molmo 7B...\n")
@@ -39,7 +40,7 @@ def main():
         if result:
             results.append(result)
             print(
-                f"  ✓ Completed: {result['summary']['total_tokens']} tokens in {result['summary']['total_duration_s']:.1f}s"
+                f"  ✓ Completed: {result['summary']['total_tokens']} tokens in {result['summary']['total_duration_s']:.1f}s (Timestamp: {result['timestamp']})"
             )
             print(
                 f"    Throughput: {result['summary']['avg_tokens_per_second']:.1f} tok/s\n"

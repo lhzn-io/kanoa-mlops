@@ -4,9 +4,23 @@
 import base64
 import io
 import json
+import sys
 import time
 from dataclasses import asdict, dataclass
 from datetime import datetime
+from pathlib import Path
+
+# Add project root to path to allow imports
+sys.path.append(str(Path(__file__).parents[2]))
+
+try:
+    from kanoa_mlops.arch_detect import detect_architecture
+except ImportError:
+    def detect_architecture():
+        """Fallback if import fails."""
+        class MockConfig:
+            description = "Unknown Platform"
+        return MockConfig()
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -312,10 +326,15 @@ def print_performance_report():
 
 def save_benchmark_results():
     """Save benchmark results to JSON file."""
+    try:
+        platform_desc = detect_architecture().description
+    except Exception:
+        platform_desc = "Unknown Platform"
+
     results = {
         "timestamp": datetime.now().isoformat(),
         "model": MODEL_NAME,
-        "platform": "RTX 5080 16GB (eGPU)",
+        "platform": platform_desc,
         "summary": {
             "total_tests": len(TEST_METRICS),
             "total_tokens": sum(m.tokens_generated for m in TEST_METRICS),

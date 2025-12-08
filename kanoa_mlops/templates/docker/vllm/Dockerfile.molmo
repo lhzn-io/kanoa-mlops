@@ -1,4 +1,5 @@
-FROM vllm/vllm-openai:latest
+ARG BASE_IMAGE=vllm/vllm-openai:latest
+FROM ${BASE_IMAGE}
 
 # Install tensorflow as required by Molmo's HF processor
 # Install bitsandbytes for 4-bit quantization (memory optimization)

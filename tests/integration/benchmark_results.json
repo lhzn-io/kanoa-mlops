@@ -1,33 +1,33 @@
 {
-  "timestamp": "2025-12-05T22:08:43.489486",
+  "timestamp": "2025-12-08T18:45:39.216958",
   "model": "allenai/Molmo-7B-D-0924",
-  "platform": "RTX 5080 16GB (eGPU)",
+  "platform": "NVIDIA Jetson Thor (Blackwell sm_110)",
   "summary": {
     "total_tests": 3,
-    "total_tokens": 479,
-    "total_duration_s": 10.59774661064148,
-    "avg_tokens_per_second": 45.198287673628975
+    "total_tokens": 577,
+    "total_duration_s": 63.32756304740906,
+    "avg_tokens_per_second": 9.1113564494506
   },
   "tests": [
     {
       "test_name": "Boardwalk Photo",
-      "duration_s": 3.8800957202911377,
-      "tokens_generated": 148,
-      "tokens_per_second": 38.14338889270882,
+      "duration_s": 20.55472731590271,
+      "tokens_generated": 159,
+      "tokens_per_second": 7.735446817481516,
       "prompt_tokens": 1207
     },
     {
       "test_name": "Complex Plot",
-      "duration_s": 6.0735766887664795,
+      "duration_s": 34.172913789749146,
       "tokens_generated": 300,
-      "tokens_per_second": 49.39428863306719,
+      "tokens_per_second": 8.778882650913749,
       "prompt_tokens": 1214
     },
     {
       "test_name": "Data Interpretation",
-      "duration_s": 0.6440742015838623,
-      "tokens_generated": 31,
-      "tokens_per_second": 48.131100304540944,
+      "duration_s": 8.599921941757202,
+      "tokens_generated": 118,
+      "tokens_per_second": 13.721054772258704,
       "prompt_tokens": 1217
     }
   ]
