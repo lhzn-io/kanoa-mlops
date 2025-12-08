@@ -1,7 +1,8 @@
-import time
 import os
+import time
+
 import requests
-from prometheus_client import start_http_server, Gauge, Info
+from prometheus_client import Gauge, Info, start_http_server
 
 # Configuration
 OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://ollama:11434")

@@ -3,12 +3,10 @@ import io
 import json
 import platform
 import time
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from datetime import datetime
-from typing import Optional
 
 import matplotlib.pyplot as plt
-import numpy as np
 import requests
 from PIL import Image
 
@@ -296,7 +294,7 @@ def test_api_health():
     health_url = "http://localhost:8000/health"
     response = requests.get(health_url)
     response.raise_for_status()
-    print(f"[OK] Health check passed")
+    print("[OK] Health check passed")
     print("[PASS] API health test passed")
 
 def print_performance_report():
@@ -313,13 +311,13 @@ def print_performance_report():
     total_duration = sum(m.duration_s for m in TEST_METRICS)
     avg_tokens_per_sec = total_tokens / total_duration if total_duration > 0 else 0
 
-    print(f"\nOverall Statistics:")
+    print("\nOverall Statistics:")
     print(f"  Total Tokens Generated: {total_tokens}")
     print(f"  Total Duration: {total_duration:.2f}s")
     print(f"  Average Throughput: {avg_tokens_per_sec:.1f} tokens/s")
 
     # Per-test breakdown
-    print(f"\nPer-Test Results:")
+    print("\nPer-Test Results:")
     print(f"{'Test Name':<25} {'Duration':<12} {'Tokens':<10} {'Tok/s':<10}")
     print("-" * 70)
     for metric in TEST_METRICS:

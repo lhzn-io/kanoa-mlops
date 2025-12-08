@@ -7,7 +7,6 @@ import json
 import time
 from dataclasses import asdict, dataclass
 from datetime import datetime
-from typing import Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -241,7 +240,7 @@ def test_api_health():
     health_url = "http://localhost:8000/health"
     response = requests.get(health_url)
     response.raise_for_status()
-    print(f"[OK] Health check passed")
+    print("[OK] Health check passed")
     print("[PASS] API health test passed")
 
 def print_performance_report():
@@ -289,7 +288,7 @@ def save_benchmark_results():
     with open("benchmark_results.json", "w") as f:
         json.dump(results, f, indent=2)
 
-    print(f"\n[INFO] Benchmark results saved to: benchmark_results.json")
+    print("\n[INFO] Benchmark results saved to: benchmark_results.json")
 
 if __name__ == "__main__":
     print("[INFO] Starting Integration Tests for Molmo 7B Vision...")

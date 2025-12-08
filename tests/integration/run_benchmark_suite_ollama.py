@@ -7,6 +7,7 @@ import time
 from pathlib import Path
 from statistics import mean, stdev
 
+
 def run_single_benchmark():
     """Run a single benchmark and return results."""
     result = subprocess.run(
@@ -43,7 +44,7 @@ def main():
             print(f"  ✓ Completed: {result['summary']['total_tokens']} tokens in {result['summary']['total_duration_s']:.1f}s")
             print(f"    Throughput: {result['summary']['avg_tokens_per_second']:.1f} tok/s\n")
         else:
-            print(f"  ✗ Failed\n")
+            print("  ✗ Failed\n")
 
         # Brief pause between runs
         if i < num_runs - 1:
@@ -61,7 +62,7 @@ def main():
 
     # Overall throughput stats
     throughputs = [r['summary']['avg_tokens_per_second'] for r in results]
-    print(f"\nOverall Throughput:")
+    print("\nOverall Throughput:")
     print(f"  Mean:   {mean(throughputs):.1f} tok/s")
     if len(throughputs) > 1:
         print(f"  StdDev: {stdev(throughputs):.1f} tok/s")
@@ -69,7 +70,7 @@ def main():
         print(f"  Max:    {max(throughputs):.1f} tok/s")
 
     # Per-test statistics (Ollama test currently only has 'Basic Chat')
-    print(f"\nPer-Test Statistics:")
+    print("\nPer-Test Statistics:")
     print(f"{'Test':<25} {'Mean (tok/s)':<15} {'StdDev':<10} {'Min':<10} {'Max':<10}")
     print("-" * 70)
 
@@ -132,7 +133,7 @@ def main():
     with open("benchmark_statistics_ollama.json", "w") as f:
         json.dump(aggregated, f, indent=2)
 
-    print(f"\n[INFO] Statistics saved to: benchmark_statistics_ollama.json")
+    print("\n[INFO] Statistics saved to: benchmark_statistics_ollama.json")
 
 if __name__ == "__main__":
     main()

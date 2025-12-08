@@ -34,7 +34,7 @@ def run_command(command: List[str], cwd: Path, description: str) -> None:
     console.print(f"[bold blue]ℹ {description}...[/bold blue]")
     try:
         subprocess.run(command, cwd=cwd, check=True)
-        console.print(f"[bold green]✔ Done.[/bold green]")
+        console.print("[bold green]✔ Done.[/bold green]")
     except subprocess.CalledProcessError as e:
         console.print(f"[bold red]✘ Failed:[/bold red] {e}")
         sys.exit(1)
@@ -61,7 +61,7 @@ def serve_monitoring(mlops_path: Path) -> None:
 def stop_all(mlops_path: Path) -> None:
     """Stop all known services."""
     console.print("[bold yellow]Stopping all kanoa-mlops services...[/bold yellow]")
-    
+
     # Stop Ollama
     with contextlib.suppress(Exception):
         run_command(
@@ -69,7 +69,7 @@ def stop_all(mlops_path: Path) -> None:
             cwd=mlops_path,
             description="Stopping Ollama"
         )
-        
+
     # Stop Monitoring
     with contextlib.suppress(Exception):
          run_command(
@@ -77,7 +77,7 @@ def stop_all(mlops_path: Path) -> None:
             cwd=mlops_path,
             description="Stopping Monitoring"
         )
-    
+
     console.print("[bold green]✔ All services stopped.[/bold green]")
 
 
@@ -85,7 +85,7 @@ def handle_serve(args) -> None:
     """Handle the 'serve' command."""
     mlops_path = get_kanoa_mlops_path()
     service = args.service
-    
+
     if service == "ollama":
         serve_ollama(mlops_path)
     elif service == "monitoring":
