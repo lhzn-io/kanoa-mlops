@@ -8,6 +8,7 @@ services:
     image: vllm/vllm-openai:latest
 {% endif %}
     container_name: kanoa-vllm-gemma3
+    runtime: nvidia
     ports:
       - "8000:8000" # Standard vLLM port (use 8001:8000 if running alongside Molmo)
     volumes:
