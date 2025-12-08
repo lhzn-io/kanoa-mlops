@@ -73,6 +73,7 @@ def run_docker_compose(
     Returns:
         True on success, False on failure.
     """
+    # Try 'docker compose' (v2 plugin) first
     cmd = ["docker", "compose", "-f", str(compose_file), action]
     if action == "up" and detach:
         cmd.append("-d")
@@ -81,9 +82,29 @@ def run_docker_compose(
         subprocess.run(cmd, check=True)
         return True
     except subprocess.CalledProcessError:
-        return False
+        # If 'docker compose' fails, it might be because the plugin is missing
+        # or the command failed for another reason.
+        # Let's try checking if 'docker compose' is valid.
+        pass
     except FileNotFoundError:
         console.print("[red]Error: docker not found. Please install Docker.[/red]")
+        return False
+
+    # Fallback: Try 'docker-compose' (standalone v1)
+    console.print("[yellow]Warning: 'docker compose' failed. Trying 'docker-compose'...[/yellow]")
+    cmd = ["docker-compose", "-f", str(compose_file), action]
+    if action == "up" and detach:
+        cmd.append("-d")
+
+    try:
+        subprocess.run(cmd, check=True)
+        return True
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        console.print("[red]Error: Failed to run docker compose.[/red]")
+        console.print("Please ensure you have Docker Compose installed:")
+        console.print("  - Docker Desktop (Mac/Windows)")
+        console.print("  - docker-compose-plugin (Linux)")
+        console.print("  - or standalone docker-compose")
         return False
 
 
@@ -144,6 +165,15 @@ def handle_serve(args) -> None:
     service = args.service
     service_map = get_initialized_services(mlops_path)
 
+    if service is None:
+        console.print("[bold]Available Services:[/bold]")
+        for name in service_map:
+            console.print(f"  • {name}")
+        console.print("")
+        console.print("Run [bold]kanoa serve <service>[/bold] to start one.")
+        console.print("Run [bold]kanoa serve all[/bold] to start everything.")
+        return
+
     if service == "all":
         for name, compose_file in service_map.items():
             if compose_file.exists():
@@ -184,8 +214,17 @@ def handle_stop(args) -> None:
         console.print("[yellow]No mlops path configured. Nothing to stop.[/yellow]")
         return
 
-    service = getattr(args, "service", "all")
+    service = getattr(args, "service", None)
     service_map = get_initialized_services(mlops_path)
+
+    if service is None:
+        console.print("[bold]Available Services to Stop:[/bold]")
+        for name in service_map:
+            console.print(f"  • {name}")
+        console.print("")
+        console.print("Run [bold]kanoa stop <service>[/bold] to stop one.")
+        console.print("Run [bold]kanoa stop all[/bold] to stop everything.")
+        return
 
     if service == "all":
         for name, compose_file in service_map.items():
@@ -205,6 +244,22 @@ def handle_stop(args) -> None:
 
 def handle_restart(args) -> None:
     """Handle the 'restart' command."""
+    if args.service is None:
+        # Reuse handle_stop's listing logic or just print help
+        # Since handle_stop(args) will print help if service is None, we can just call it?
+        # But handle_serve also prints help.
+        # Let's just print help here to be explicit.
+        mlops_path = resolve_mlops_path()
+        if mlops_path:
+            service_map = get_initialized_services(mlops_path)
+            console.print("[bold]Available Services to Restart:[/bold]")
+            for name in service_map:
+                console.print(f"  • {name}")
+            console.print("")
+            console.print("Run [bold]kanoa restart <service>[/bold] to restart one.")
+            console.print("Run [bold]kanoa restart all[/bold] to restart everything.")
+        return
+
     # Stop then start
     handle_stop(args)
     handle_serve(args)
@@ -370,7 +425,7 @@ def register(parser) -> None:
     )
     serve_parser.add_argument(
         "service",
-        default="all",
+        default=None,
         nargs="?",
         help="Service to start (ollama, monitoring, vllm-*, or all)",
     )
@@ -380,9 +435,9 @@ def register(parser) -> None:
     stop_parser = parser.add_parser("stop", help="Stop local services")
     stop_parser.add_argument(
         "service",
-        default="all",
+        default=None,
         nargs="?",
-        help="Service to stop (default: all)",
+        help="Service to stop (default: list services)",
     )
     stop_parser.set_defaults(func=handle_stop)
 
@@ -390,9 +445,9 @@ def register(parser) -> None:
     restart_parser = parser.add_parser("restart", help="Restart local services")
     restart_parser.add_argument(
         "service",
-        default="all",
+        default=None,
         nargs="?",
-        help="Service to restart (default: all)",
+        help="Service to restart (default: list services)",
     )
     restart_parser.set_defaults(func=handle_restart)
 
