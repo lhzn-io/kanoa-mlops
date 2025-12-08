@@ -3,8 +3,6 @@
 
 .PHONY: help setup setup-user setup-dev lint test clean docs
 .PHONY: deploy destroy status ssh logs stop start list switch my-ip cost
-.PHONY: serve-ollama serve-monitoring stop-ollama stop-monitoring stop-all restart-ollama restart-monitoring
-.PHONY: serve-olmo3-32b stop-olmo3-32b restart-olmo3-32b
 
 # =============================================================================
 # Help
@@ -33,9 +31,6 @@ help:
 	@echo "    kanoa serve monitoring"
 	@echo "    kanoa serve vllm-gemma"
 	@echo "    kanoa stop"
-	@echo ""
-	@echo "  Legacy/Native:"
-	@echo "  make serve-molmo        - Start Molmo 7B (native vLLM, no Docker)"
 	@echo ""
 	@echo "Development:"
 	@echo "  make setup-user         - Install user dependencies (pip)"
@@ -140,55 +135,6 @@ infra-setup:
 
 deploy-molmo:
 	@$(MAKE) _deploy WORKSPACE=molmo PRESET=molmo-7b
-
-serve-molmo:
-	@echo "Starting Molmo 7B server (native)..."
-	@if [ ! -d "${MOLMO_MODEL_PATH:-$(HOME)/.cache/kanoa/models/molmo}" ]; then \
-	@echo "Model not found? Run: huggingface-cli download allenai/Molmo-7B-D-0924"; \
-		huggingface-cli download allenai/Molmo-7B-D-0924; \
-	fi
-	@export MOLMO_MODEL_PATH=${MOLMO_MODEL_PATH:-$(HOME)/.cache/kanoa/models/molmo} && \
-	python3 -m vllm.entrypoints.openai.api_server \
-		--model $$MOLMO_MODEL_PATH \
-		--served-model-name molmo-7b \
-		--trust-remote-code \
-		--max-model-len 4096 \
-		--gpu-memory-utilization 0.9 \
-		--gpu-memory-utilization 0.9 \
-		--port 8000
-
-# Deprecated: Use 'kanoa serve ollama'
-serve-ollama:
-	@echo "⚠️  Deprecated: Use 'kanoa serve ollama' instead."
-	@kanoa serve ollama
-
-# Deprecated: Use 'kanoa serve monitoring'
-serve-monitoring:
-	@echo "⚠️  Deprecated: Use 'kanoa serve monitoring' instead."
-	@kanoa serve monitoring
-
-# Deprecated: Use 'kanoa serve vllm-olmo3'
-serve-olmo3-32b:
-	@echo "⚠️  Deprecated: Use 'kanoa serve vllm-olmo3' instead."
-	@kanoa serve vllm-olmo3
-
-stop-ollama:
-	@kanoa stop ollama
-
-stop-monitoring:
-	@kanoa stop monitoring
-
-stop-olmo3-32b:
-	@kanoa stop vllm-olmo3
-
-stop-all:
-	@kanoa stop
-
-restart-ollama: stop-ollama serve-ollama
-
-restart-monitoring: stop-monitoring serve-monitoring
-
-restart-olmo3-32b: stop-olmo3-32b serve-olmo3-32b
 
 test-ollama:
 	@echo "Running Ollama integration tests..."
