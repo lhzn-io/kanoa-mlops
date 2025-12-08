@@ -14,6 +14,61 @@ from pathlib import Path
 
 from kanoa_mlops.config import get_mlops_path, set_mlops_path
 
+import re
+
+
+# Detect which compose client is available and cache it
+def _detect_compose_client() -> list[str] | None:
+    """Return the base command for docker compose: either ['docker','compose'] or ['docker-compose'].
+
+    Returns None if no compose client is available.
+    """
+    try:
+        # Prefer 'docker compose' (plugin)
+        rc = subprocess.run(["docker", "compose", "version"], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        if rc.returncode == 0:
+            return ["docker", "compose"]
+    except FileNotFoundError:
+        pass
+
+    try:
+        rc = subprocess.run(["docker-compose", "--version"], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        if rc.returncode == 0:
+            return ["docker-compose"]
+    except FileNotFoundError:
+        pass
+
+    return None
+
+
+# Cached compose command used across functions
+COMPOSE_CMD = _detect_compose_client()
+
+
+def _parse_images_from_compose(compose_file: Path) -> list[str]:
+    """Naively parse `image:` lines from a docker-compose YAML file.
+
+    This is intentionally lightweight (regex) to avoid adding PyYAML runtime dependency.
+    """
+    images: list[str] = []
+    try:
+        text = compose_file.read_text()
+    except Exception:
+        return images
+
+    for m in re.finditer(r"^\s*image:\s*(\S+)", text, flags=re.MULTILINE):
+        images.append(m.group(1).strip())
+    return images
+
+
+def _image_exists(image: str) -> bool:
+    """Return True if a Docker image with this name:tag exists locally."""
+    try:
+        result = subprocess.run(["docker", "images", "-q", image], capture_output=True, text=True)
+        return bool(result.stdout.strip())
+    except FileNotFoundError:
+        return False
+
 # Rich for CLI output (graceful fallback if not available)
 try:
     from rich.console import Console
@@ -49,7 +104,16 @@ def resolve_mlops_path() -> Path | None:
     # Check user config first
     config_path = get_mlops_path()
     if config_path:
-        return config_path
+        # Normalize to Path and ensure it exists; ignore invalid config values
+        try:
+            p = Path(config_path)
+        except Exception:
+            return None
+        if p.exists():
+            return p.resolve()
+        else:
+            console.print(f"[yellow]Warning: configured mlops path does not exist: {p}[/yellow]")
+            # fall through to dev-mode detection
 
     # Check if running from development repo
     repo_root = Path(__file__).resolve().parent.parent
@@ -73,8 +137,12 @@ def run_docker_compose(
     Returns:
         True on success, False on failure.
     """
-    # Try 'docker compose' (v2 plugin) first
-    cmd = ["docker", "compose", "-f", str(compose_file), action]
+    # Build the command using the detected compose client
+    if COMPOSE_CMD is None:
+        console.print("[red]Error: No Docker Compose client found (docker compose or docker-compose)[/red]")
+        return False
+
+    cmd = COMPOSE_CMD + ["-f", str(compose_file), action]
     if action == "up" and detach:
         cmd.append("-d")
 
@@ -82,7 +150,7 @@ def run_docker_compose(
         subprocess.run(cmd, check=True)
         return True
     except subprocess.CalledProcessError:
-        # DIAGNOSTIC 1: Check for permission issues (docker group)
+        # DIAGNOSTIC: Check for permission issues (docker group)
         try:
             subprocess.run(
                 ["docker", "info"],
@@ -91,7 +159,15 @@ def run_docker_compose(
                 stderr=subprocess.PIPE,
             )
         except subprocess.CalledProcessError as e:
-            err_msg = e.stderr.decode().lower()
+            err_msg = None
+            if getattr(e, "stderr", None):
+                try:
+                    err_msg = e.stderr.decode().lower()
+                except Exception:
+                    err_msg = str(e)
+            else:
+                err_msg = str(e).lower()
+
             if "permission denied" in err_msg and "docker.sock" in err_msg:
                 console.print(
                     "[red]Error: Permission denied accessing Docker daemon.[/red]"
@@ -103,52 +179,10 @@ def run_docker_compose(
                 )
                 return False
 
-        # DIAGNOSTIC 2: Check if the failure was due to missing plugin
-        is_plugin_missing = False
-        try:
-            subprocess.run(
-                ["docker", "compose", "version"],
-                check=True,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-            )
-        except subprocess.CalledProcessError:
-            is_plugin_missing = True
-
-        if not is_plugin_missing:
-            # It failed for a real reason (e.g. config error), don't retry with v1
-            return False
-
-        # Plugin is missing, print helpful message
-        console.print(
-            "[yellow]Warning: 'docker compose' (v2) command not found.[/yellow]"
-        )
-        console.print("It looks like the Docker Compose plugin is missing.")
-        console.print("To install on Ubuntu/Debian:")
-        console.print(
-            "  [bold]sudo apt-get update && sudo apt-get install docker-compose-v2[/bold]"
-        )
-        console.print("")
-        console.print("Attempting fallback to legacy 'docker-compose' (v1)...")
-
+        console.print("[red]Error: docker compose command failed.[/red]")
+        return False
     except FileNotFoundError:
         console.print("[red]Error: docker not found. Please install Docker.[/red]")
-        return False
-
-    # Fallback: Try 'docker-compose' (standalone v1)
-    cmd = ["docker-compose", "-f", str(compose_file), action]
-    if action == "up" and detach:
-        cmd.append("-d")
-
-    try:
-        subprocess.run(cmd, check=True)
-        return True
-    except (subprocess.CalledProcessError, FileNotFoundError):
-        console.print("[red]Error: Failed to run docker compose.[/red]")
-        console.print("Please ensure you have Docker Compose installed:")
-        console.print("  - Docker Desktop (Mac/Windows)")
-        console.print("  - docker-compose-plugin (Linux)")
-        console.print("  - or standalone docker-compose")
         return False
 
 
@@ -184,7 +218,21 @@ def handle_init(args) -> None:
         )
         sys.exit(1)
 
-    shutil.copytree(docker_src, docker_dst, dirs_exist_ok=True)
+    # Ensure the templates actually include the expected `docker/` subtree
+    if not docker_src.exists():
+        console.print(
+            f"[red]Error: bundled templates do not include 'docker' directory: {docker_src}[/red]"
+        )
+        sys.exit(1)
+
+    try:
+        shutil.copytree(docker_src, docker_dst, dirs_exist_ok=True)
+    except PermissionError:
+        console.print(f"[red]Error: Permission denied copying templates to {docker_dst}[/red]")
+        sys.exit(1)
+    except Exception as e:
+        console.print(f"[red]Error: Failed to copy templates: {e}[/red]")
+        sys.exit(1)
 
     # Save to user config
     set_mlops_path(target_dir)
@@ -220,13 +268,29 @@ def handle_serve(args) -> None:
 
     if service == "all":
         for name, compose_file in service_map.items():
-            if compose_file.exists():
-                console.print(f"[blue]Starting {name}...[/blue]")
-                run_docker_compose(compose_file, "up")
-            else:
+            if not compose_file.exists():
+                console.print(f"[yellow]Skipping {name}: compose file not found[/yellow]")
+                continue
+
+            console.print(f"[blue]Starting {name}...[/blue]")
+
+            # Auto-build missing images referenced by this compose file
+            images = _parse_images_from_compose(compose_file)
+            missing = [img for img in images if not _image_exists(img)]
+            if missing:
                 console.print(
-                    f"[yellow]Skipping {name}: compose file not found[/yellow]"
+                    f"[yellow]Detected missing images for {name}: {', '.join(missing)}. Building first...[/yellow]"
                 )
+                if COMPOSE_CMD is None:
+                    console.print("[red]Error: No Docker Compose client available to build images.[/red]")
+                    continue
+                try:
+                    subprocess.run(COMPOSE_CMD + ["-f", str(compose_file), "build"], check=True)
+                except subprocess.CalledProcessError:
+                    console.print(f"[red]Failed to build images for {name}, skipping start.[/red]")
+                    continue
+
+            run_docker_compose(compose_file, "up")
     else:
         compose_file = service_map.get(service)
         if not compose_file or not compose_file.exists():
@@ -237,6 +301,20 @@ def handle_serve(args) -> None:
             sys.exit(1)
 
         console.print(f"[blue]Starting {service}...[/blue]")
+        # Auto-build missing images for this service before starting
+        images = _parse_images_from_compose(compose_file)
+        missing = [img for img in images if not _image_exists(img)]
+        if missing:
+            console.print(f"[yellow]Detected missing images: {', '.join(missing)}. Building first...[/yellow]")
+            if COMPOSE_CMD is None:
+                console.print("[red]Error: No Docker Compose client available to build images.[/red]")
+                sys.exit(1)
+            try:
+                subprocess.run(COMPOSE_CMD + ["-f", str(compose_file), "build"], check=True)
+            except subprocess.CalledProcessError:
+                console.print(f"[red]Failed to build images for {service}[/red]")
+                sys.exit(1)
+
         if not run_docker_compose(compose_file, "up"):
             console.print(f"[red]Failed to start {service}[/red]")
             sys.exit(1)
@@ -394,21 +472,23 @@ def handle_list(args) -> None:
 
     # Check if Ollama is running first
     try:
+        # Ensure Ollama compose file is configured
+        ollama_compose = services.get("ollama")
+        if not ollama_compose or not ollama_compose.exists():
+            console.print("  [dim]Ollama service not configured[/dim]")
+            return
+
+        if COMPOSE_CMD is None:
+            console.print("  [dim]Docker Compose not available to query Ollama[/dim]")
+            return
+
         # Try to list models via docker exec
         result = subprocess.run(
-            [
-                "docker",
-                "compose",
-                "-f",
-                str(services["ollama"]),
-                "exec",
-                "ollama",
-                "ollama",
-                "list",
-            ],
+            COMPOSE_CMD + ["-f", str(ollama_compose), "exec", "ollama", "ollama", "list"],
             capture_output=True,
             text=True,
         )
+
         if result.returncode == 0:
             models = result.stdout.strip().split("\n")
             if len(models) > 1:  # Header + models
