@@ -1,12 +1,12 @@
 """
 Plugin for kanoa CLI to manage local MLOps services.
+
+All operations delegate to Makefile targets for single source of truth.
 """
 
-import contextlib
 import subprocess
 import sys
 from pathlib import Path
-from typing import List
 
 # We don't want to depend on rich if kanoa-mlops is installed standalone,
 # but since it's a plugin for kanoa, rich should be available.
@@ -32,99 +32,95 @@ def get_kanoa_mlops_path() -> Path:
     return Path(__file__).resolve().parent.parent
 
 
-def run_command(command: List[str], cwd: Path, description: str) -> None:
-    """Run a shell command in the specified directory."""
-    console.print(f"[bold blue]i {description}...[/bold blue]")
+def run_make(target: str, mlops_path: Path) -> bool:
+    """Run a make target. Returns True on success."""
     try:
-        subprocess.run(command, cwd=cwd, check=True)
-        console.print("[bold green]✔ Done.[/bold green]")
-    except subprocess.CalledProcessError as e:
-        console.print(f"[bold red]✘ Failed:[/bold red] {e}")
-        sys.exit(1)
-
-
-def serve_ollama(mlops_path: Path) -> None:
-    """Start Ollama service."""
-    run_command(
-        ["make", "serve-ollama"], cwd=mlops_path, description="Starting Ollama service"
-    )
-
-
-def serve_monitoring(mlops_path: Path) -> None:
-    """Start Monitoring stack."""
-    run_command(
-        ["make", "serve-monitoring"],
-        cwd=mlops_path,
-        description="Starting Monitoring stack",
-    )
-
-
-def stop_all(mlops_path: Path) -> None:
-    """Stop all known services."""
-    console.print("[bold yellow]Stopping all kanoa-mlops services...[/bold yellow]")
-
-    # Stop Ollama
-    with contextlib.suppress(Exception):
-        run_command(
-            [
-                "docker",
-                "compose",
-                "-f",
-                "docker/ollama/docker-compose.ollama.yml",
-                "down",
-            ],
-            cwd=mlops_path,
-            description="Stopping Ollama",
-        )
-
-    # Stop Monitoring
-    with contextlib.suppress(Exception):
-        run_command(
-            ["docker", "compose", "-f", "docker/monitoring/docker-compose.yml", "down"],
-            cwd=mlops_path,
-            description="Stopping Monitoring",
-        )
-
-    console.print("[bold green]✔ All services stopped.[/bold green]")
+        subprocess.run(["make", target], cwd=mlops_path, check=True)
+        return True
+    except subprocess.CalledProcessError:
+        return False
 
 
 def handle_serve(args) -> None:
-    """Handle the 'serve' command."""
+    """Handle the 'serve' command by delegating to Makefile."""
     mlops_path = get_kanoa_mlops_path()
     service = args.service
 
-    if service == "ollama":
-        serve_ollama(mlops_path)
-    elif service == "monitoring":
-        serve_monitoring(mlops_path)
-    elif service == "all":
-        serve_ollama(mlops_path)
-        serve_monitoring(mlops_path)
+    if service == "all":
+        run_make("serve-ollama", mlops_path)
+        run_make("serve-monitoring", mlops_path)
     else:
-        console.print(f"[red]Unknown service: {service}[/red]")
+        target = f"serve-{service}"
+        if not run_make(target, mlops_path):
+            console.print(f"[red]Failed to start {service}[/red]")
+            sys.exit(1)
 
 
 def handle_stop(args) -> None:
-    """Handle the 'stop' command."""
+    """Handle the 'stop' command by delegating to Makefile."""
     mlops_path = get_kanoa_mlops_path()
-    stop_all(mlops_path)
+    service = getattr(args, "service", "all")
+
+    if service == "all":
+        run_make("stop-all", mlops_path)
+    else:
+        target = f"stop-{service}"
+        if not run_make(target, mlops_path):
+            console.print(f"[red]Failed to stop {service}[/red]")
+            sys.exit(1)
+
+
+def handle_restart(args) -> None:
+    """Handle the 'restart' command by delegating to Makefile."""
+    mlops_path = get_kanoa_mlops_path()
+    service = args.service
+
+    if service == "all":
+        run_make("restart-ollama", mlops_path)
+        run_make("restart-monitoring", mlops_path)
+    else:
+        target = f"restart-{service}"
+        if not run_make(target, mlops_path):
+            console.print(f"[red]Failed to restart {service}[/red]")
+            sys.exit(1)
+
+
+SERVICE_CHOICES = ["ollama", "monitoring", "all"]
 
 
 def register(parser) -> None:
     """Register CLI subcommands."""
-    # Add 'serve' command
+    # Add 'serve' command (alias: up)
     serve_parser = parser.add_parser(
-        "serve", help="Start local services (vLLM/Ollama/Monitoring)"
+        "serve", help="Start local services (Ollama, Monitoring)"
     )
     serve_parser.add_argument(
         "service",
-        choices=["ollama", "monitoring", "all"],
+        choices=SERVICE_CHOICES,
         default="all",
         nargs="?",
-        help="Service to start",
+        help="Service to start (default: all)",
     )
     serve_parser.set_defaults(func=handle_serve)
 
-    # Add 'stop' command
-    stop_parser = parser.add_parser("stop", help="Stop all local services")
+    # Add 'stop' command (alias: down)
+    stop_parser = parser.add_parser("stop", help="Stop local services")
+    stop_parser.add_argument(
+        "service",
+        choices=SERVICE_CHOICES,
+        default="all",
+        nargs="?",
+        help="Service to stop (default: all)",
+    )
     stop_parser.set_defaults(func=handle_stop)
+
+    # Add 'restart' command
+    restart_parser = parser.add_parser("restart", help="Restart local services")
+    restart_parser.add_argument(
+        "service",
+        choices=SERVICE_CHOICES,
+        default="all",
+        nargs="?",
+        help="Service to restart (default: all)",
+    )
+    restart_parser.set_defaults(func=handle_restart)

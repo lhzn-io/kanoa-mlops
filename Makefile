@@ -3,6 +3,7 @@
 
 .PHONY: help setup setup-user setup-dev lint test clean docs
 .PHONY: deploy destroy status ssh logs stop start list switch my-ip cost
+.PHONY: serve-ollama serve-monitoring stop-ollama stop-monitoring stop-all restart-ollama restart-monitoring
 
 # =============================================================================
 # Help
@@ -19,14 +20,21 @@ help:
 	@echo "  make deploy-gemma3-12b  - Deploy vLLM with Gemma 3 12B"
 	@echo "  make deploy-gemma3-27b  - Deploy vLLM with Gemma 3 27B"
 	@echo "  make deploy-llama3-8b   - Deploy vLLM with Llama 3 8B"
-	@echo "  make serve-molmo        - Serve Molmo 7B locally (native)"
-	@echo "  make serve-ollama       - Serve Ollama locally (Docker)"
-	@echo "  make serve-monitoring   - Serve Monitoring stack (Prometheus/Grafana)"
 	@echo "  make destroy            - Destroy current deployment"
 	@echo "  make status             - Show deployment status"
 	@echo "  make stop               - Stop instance (save costs)"
 	@echo "  make start              - Start stopped instance"
 	@echo "  make clean-infra        - Destroy ALL deployments"
+	@echo ""
+	@echo "Local Services:"
+	@echo "  make serve-ollama       - Start Ollama (Docker)"
+	@echo "  make serve-monitoring   - Start Monitoring stack (Prometheus/Grafana)"
+	@echo "  make serve-molmo        - Start Molmo 7B (native vLLM)"
+	@echo "  make stop-ollama        - Stop Ollama"
+	@echo "  make stop-monitoring    - Stop Monitoring stack"
+	@echo "  make stop-all           - Stop all local services"
+	@echo "  make restart-ollama     - Restart Ollama"
+	@echo "  make restart-monitoring - Restart Monitoring stack"
 	@echo ""
 	@echo "Development:"
 	@echo "  make setup-user         - Install user dependencies (pip)"
@@ -160,6 +168,26 @@ serve-monitoring:
 	@docker compose -f docker/monitoring/docker-compose.yml up -d
 	@echo "Grafana: http://localhost:3000 (admin/admin)"
 	@echo "Prometheus: http://localhost:9090"
+
+stop-ollama:
+	@echo "Stopping Ollama..."
+	@docker compose -f docker/ollama/docker-compose.ollama.yml down
+	@echo "Ollama stopped."
+
+stop-monitoring:
+	@echo "Stopping Monitoring stack..."
+	@docker compose -f docker/monitoring/docker-compose.yml down
+	@echo "Monitoring stopped."
+
+stop-all:
+	@echo "Stopping all local services..."
+	-@docker compose -f docker/ollama/docker-compose.ollama.yml down 2>/dev/null
+	-@docker compose -f docker/monitoring/docker-compose.yml down 2>/dev/null
+	@echo "All local services stopped."
+
+restart-ollama: stop-ollama serve-ollama
+
+restart-monitoring: stop-monitoring serve-monitoring
 
 test-ollama:
 	@echo "Running Ollama integration tests..."

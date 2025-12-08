@@ -2,9 +2,9 @@
 description: Serve local AI backend services (Ollama, vLLM, Monitoring)
 ---
 
-# Serving Local Infrastructure
+# Local Service Management
 
-You can manage the local AI infrastructure (Ollama, vLLM, Monitoring) using the `kanoa` CLI (requires `kanoa-mlops` plugin installed).
+Manage local AI infrastructure (Ollama, Monitoring) using either the `kanoa` CLI or `make` targets.
 
 ## Setup
 
@@ -14,32 +14,85 @@ Ensure you have installed the `kanoa-mlops` plugin:
 pip install -e .
 ```
 
-## Quick Start
+## Using the CLI
 
-### Start Everything
-
-```bash
-# // turbo
-kanoa serve all
-```
-
-### Start Specific Service
+### Start Services
 
 ```bash
 # // turbo
-kanoa serve ollama
+kanoa serve all         # Start all services
+
+# // turbo
+kanoa serve ollama      # Start Ollama only
+
+# // turbo
+kanoa serve monitoring  # Start Monitoring only
 ```
+
+### Stop Services
 
 ```bash
 # // turbo
-kanoa serve monitoring
+kanoa stop              # Stop all services
+
+# // turbo
+kanoa stop ollama       # Stop Ollama only
+
+# // turbo
+kanoa stop monitoring   # Stop Monitoring only
 ```
 
-## Stopping Services
-
-To stop all running services:
+### Restart Services
 
 ```bash
 # // turbo
-kanoa stop
+kanoa restart ollama      # Restart Ollama
+
+# // turbo
+kanoa restart monitoring  # Restart Monitoring
 ```
+
+## Using Make Targets
+
+Alternatively, use make directly:
+
+```bash
+# Start
+make serve-ollama
+make serve-monitoring
+
+# Stop
+make stop-ollama
+make stop-monitoring
+make stop-all
+
+# Restart
+make restart-ollama
+make restart-monitoring
+```
+
+## Service URLs
+
+After starting services:
+
+| Service | URL | Credentials |
+|---------|-----|-------------|
+| Ollama | <http://localhost:11434> | N/A |
+| Grafana | <http://localhost:3000> | admin/admin |
+| Prometheus | <http://localhost:9090> | N/A |
+
+## Architecture
+
+```
+CLI (kanoa)          Makefile           Docker Compose
+    │                    │                    │
+    └──► delegates ──►   │   ──► executes ──► │
+                         │                    │
+  kanoa serve ollama     │                    │
+         │               │                    │
+         └───────►  make serve-ollama         │
+                         │                    │
+                         └──────────► docker compose up -d
+```
+
+**Single source of truth**: All logic lives in the Makefile. CLI and workflows just delegate.
