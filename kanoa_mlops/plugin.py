@@ -142,12 +142,7 @@ def handle_serve(args) -> None:
         sys.exit(1)
 
     service = args.service
-    docker_dir = mlops_path / "docker"
-
-    service_map = {
-        "ollama": docker_dir / "ollama" / "docker-compose.ollama.yml",
-        "monitoring": docker_dir / "monitoring" / "docker-compose.yml",
-    }
+    service_map = get_initialized_services(mlops_path)
 
     if service == "all":
         for name, compose_file in service_map.items():
@@ -159,12 +154,14 @@ def handle_serve(args) -> None:
                     f"[yellow]Skipping {name}: compose file not found[/yellow]"
                 )
     else:
-        compose_file: Path | None = service_map.get(service)  # type: ignore[no-redef]
+        compose_file = service_map.get(service)
         if not compose_file or not compose_file.exists():
-            console.print(f"[red]Error: {service} compose file not found.[/red]")
+            console.print(f"[red]Error: Service '{service}' not found.[/red]")
+            console.print("Available services:")
+            for s in service_map:
+                console.print(f"  - {s}")
             sys.exit(1)
 
-        # Type narrowing: compose_file is Path here
         console.print(f"[blue]Starting {service}...[/blue]")
         if not run_docker_compose(compose_file, "up"):
             console.print(f"[red]Failed to start {service}[/red]")
@@ -188,12 +185,7 @@ def handle_stop(args) -> None:
         return
 
     service = getattr(args, "service", "all")
-    docker_dir = mlops_path / "docker"
-
-    service_map = {
-        "ollama": docker_dir / "ollama" / "docker-compose.ollama.yml",
-        "monitoring": docker_dir / "monitoring" / "docker-compose.yml",
-    }
+    service_map = get_initialized_services(mlops_path)
 
     if service == "all":
         for name, compose_file in service_map.items():
@@ -201,10 +193,12 @@ def handle_stop(args) -> None:
                 console.print(f"[blue]Stopping {name}...[/blue]")
                 run_docker_compose(compose_file, "down")
     else:
-        compose_file: Path | None = service_map.get(service)  # type: ignore[no-redef]
+        compose_file = service_map.get(service)
         if compose_file is not None and compose_file.exists():
             console.print(f"[blue]Stopping {service}...[/blue]")
             run_docker_compose(compose_file, "down")
+        else:
+            console.print(f"[red]Error: Service '{service}' not found.[/red]")
 
     console.print("[green]✔ Services stopped.[/green]")
 
@@ -343,8 +337,6 @@ def handle_list(args) -> None:
 # CLI Registration
 # =============================================================================
 
-SERVICE_CHOICES = ["ollama", "monitoring", "all"]
-
 
 def register(parser) -> None:
     """Register CLI subcommands with the kanoa CLI."""
@@ -374,14 +366,13 @@ def register(parser) -> None:
 
     # serve command
     serve_parser = parser.add_parser(
-        "serve", help="Start local services (Ollama, Monitoring)"
+        "serve", help="Start local services (Ollama, Monitoring, vLLM)"
     )
     serve_parser.add_argument(
         "service",
-        choices=SERVICE_CHOICES,
         default="all",
         nargs="?",
-        help="Service to start (default: all)",
+        help="Service to start (ollama, monitoring, vllm-*, or all)",
     )
     serve_parser.set_defaults(func=handle_serve)
 
@@ -389,7 +380,6 @@ def register(parser) -> None:
     stop_parser = parser.add_parser("stop", help="Stop local services")
     stop_parser.add_argument(
         "service",
-        choices=SERVICE_CHOICES,
         default="all",
         nargs="?",
         help="Service to stop (default: all)",
@@ -400,7 +390,6 @@ def register(parser) -> None:
     restart_parser = parser.add_parser("restart", help="Restart local services")
     restart_parser.add_argument(
         "service",
-        choices=SERVICE_CHOICES,
         default="all",
         nargs="?",
         help="Service to restart (default: all)",

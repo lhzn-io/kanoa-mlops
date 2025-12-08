@@ -1,7 +1,7 @@
 services:
-  vllm-gemma:
+  vllm-gemma3:
     image: vllm/vllm-openai:latest
-    container_name: kanoa-vllm-gemma
+    container_name: kanoa-vllm-gemma3
     ports:
       - "8000:8000" # Standard vLLM port (use 8001:8000 if running alongside Molmo)
     volumes:
