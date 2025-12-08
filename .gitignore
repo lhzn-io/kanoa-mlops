@@ -50,3 +50,8 @@ logs/
 tmp/
 temp/
 *.tmp
+
+# Benchmark results (generated files)
+benchmark_*.json
+benchmark_*.txt
+tests/integration/benchmark_*.json
