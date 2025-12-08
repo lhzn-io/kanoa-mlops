@@ -21,6 +21,8 @@
   - [x] **Molmo 7B**: Vision-language model for chart/plot analysis.
   - [x] **Gemma 3**: Multimodal reasoning (4B, 12B, 27B).
   - [x] **Olmo 3 32B Think**: Advanced reasoning and code generation model.
+  - [ ] **Llama 4**: Natively multimodal MoE (17B Scout/Maverick).
+  - [ ] **Ministral 3**: Edge-native multimodal (14B).
   - [ ] **GPT-OSS 20B**: OpenAI's open-weight reasoning model (fits in 16GB).
   - [ ] **GPT-OSS 120B**: Via free hosted providers (HuggingFace Inference, [gpt-oss.com](https://gpt-oss.com/)).
 - **Ollama Integration** (Issue #1):
@@ -32,17 +34,27 @@
 - **Hardware Support**:
   - [x] **NVIDIA eGPU**: Verified on RTX 5080 (16GB) via Thunderbolt/OCulink.
   - [x] **GCP Cloud**: Terraform modules for L4/A100 instances with auto-shutdown.
+
   - [ ] **Jetson/Orin**: Edge deployment support.
   - [ ] **Jetson Thor**: Next-gen edge deployment support.
+    - [ ] **Benchmark Plan**: [Model Evaluation](benchmark_plan_jetson_thor.md)
 
 ### Phase 2: Grounding Integration (Q1 2026)
-
 - **Strategy**: Prioritize integration with existing Grounding/RAG frameworks over building custom infrastructure.
 - **Analysis**:
   - [ ] **Framework Survey**: Identify hosted or local frameworks that provide robust Grounding (e.g., LangChain, LlamaIndex, or specialized vector providers).
 - **Implementation**:
   - [ ] **Connectors**: Build adapters for selected Grounding providers.
   - [ ] **Fallback**: Minimal local vector store (e.g., pgvector) only if no suitable external integration exists.
+
+### Phase 2 Update: Intelligent Initialization
+
+- **Smart Model Selection**: `kanoa init mlops` will automatically select the largest model from each family that fits the detected hardware architecture.
+- **Jetson Thor Candidates**:
+  - **General**: Llama 4 Maverick (17B)
+  - **Reasoning**: Olmo 3 Think (32B)
+  - **Vision**: Molmo 72B (Quantized)
+  - **Edge**: Ministral 3 (14B)
 
 ### Phase 3: Production Hardening (Q2 2026)
 
@@ -80,7 +92,7 @@ graph TD
 | Platform | GPU Memory | Target Models | Status |
 | :--- | :--- | :--- | :--- |
 | **NVIDIA RTX 5080 (eGPU)** | 16GB | Molmo 7B (4-bit), Gemma 3 12B (4-bit), GPT-OSS 20B | [✓] Verified |
-| **NVIDIA Jetson Thor** | 128GB | Olmo 3 32B Think, Blackwell GPU, 1000 TFLOPS (FP8) | [✓] Verified |
+| **NVIDIA Jetson Thor** | 128GB | Llama 4 17B, Olmo 3 32B, Molmo 72B (Quant), Ministral 3 | [~] Verification Underway |
 | **NVIDIA RTX 4090** | 24GB | Gemma 3 27B (4-bit), GPT-OSS 20B (FP16) | [ ] Planned |
 | **GCP L4** | 24GB | Molmo 7B, Gemma 3 12B (FP16), GPT-OSS 20B | [ ] Planned |
 | **GCP H100 / AMD MI300X** | 80GB | GPT-OSS 120B | [ ] Planned |
@@ -93,3 +105,13 @@ graph TD
 - **Containerization**: All services must be Dockerized with pinned versions.
 - **Idempotency**: Setup scripts must be safe to run multiple times.
 - **Documentation**: Every hardware config must have a setup guide (e.g., `docs/source/egpu-setup-guide.md`).
+
+## 6. Jetson Thor Analysis
+
+See detailed analysis in [docs/analysis/20251208_jetson_thor_analysis.md](../analysis/20251208_jetson_thor_analysis.md).
+
+**Summary**: The Jetson Thor (128GB Unified Memory) is validated to run:
+
+- **Olmo 3 32B Think**: Full precision or quantized.
+- **Gemma 3 27B IT**: Full precision or quantized.
+- **Molmo 72B**: Quantized (4-bit/8-bit).
