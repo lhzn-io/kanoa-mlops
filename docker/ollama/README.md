@@ -2,6 +2,16 @@
 
 This directory contains the Docker Compose configuration for running [Ollama](https://ollama.com/) with GPU support.
 
+## Monitoring
+
+This setup includes a sidecar **Prometheus Exporter** running on port `11435` via the `ollama-exporter` service. It exposes:
+
+- `ollama_up`: Service health status.
+- `ollama_models_total`: Number of available models.
+- `ollama_running_models`: Number of loaded models.
+
+**Note**: Throughput metrics (tokens/sec) are **not** available via this exporter as Ollama does not expose global inference counters. For throughput analysis, use `tests/integration/run_benchmark_suite_ollama.py`.
+
 ## Usage
 
 Use the Makefile in the root directory:

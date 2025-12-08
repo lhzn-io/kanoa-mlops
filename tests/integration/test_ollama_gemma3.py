@@ -1,5 +1,8 @@
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
+import json
+import platform
+from datetime import datetime
 import requests
 
 # Configuration
@@ -151,6 +154,43 @@ def print_performance_report():
 
     print("="*70)
 
+
+def export_results_json(filename="benchmark_results_ollama.json"):
+    """Export results to JSON for further analysis."""
+    if not TEST_METRICS:
+        return
+
+    # Get system info
+    try:
+        with open('/proc/driver/nvidia/version', 'r') as f:
+            nvidia_version = f.readline().strip()
+    except:
+        nvidia_version = "unknown"
+
+    results = {
+        "timestamp": datetime.now().isoformat(),
+        "model": MODEL_NAME,
+        "platform": {
+            "system": platform.system(),
+            "machine": platform.machine(),
+            "python_version": platform.python_version(),
+            "gpu": "NVIDIA RTX 5080 16GB",
+            "driver": nvidia_version,
+            "runtime": "ollama"
+        },
+        "summary": {
+            "total_tokens": sum(m.tokens_generated for m in TEST_METRICS),
+            "total_duration_s": sum(m.duration_s for m in TEST_METRICS),
+            "avg_tokens_per_second": sum(m.tokens_per_second for m in TEST_METRICS) / len(TEST_METRICS)
+        },
+        "tests": [asdict(m) for m in TEST_METRICS]
+    }
+
+    with open(filename, 'w') as f:
+        json.dump(results, f, indent=2)
+
+    print(f"\n[INFO] Benchmark results exported to: {filename}")
+
 if __name__ == "__main__":
     print(f"[INFO] Starting Integration Tests for {MODEL_NAME} on Ollama...")
     print(f"[INFO] API URL: {API_URL}")
@@ -168,6 +208,9 @@ if __name__ == "__main__":
         
         # Print performance report
         print_performance_report()
+
+        # Export JSON
+        export_results_json()
 
         print("\n" + "="*70)
         print("[SUCCESS] All integration tests passed!")

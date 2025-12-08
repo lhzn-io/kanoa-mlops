@@ -47,14 +47,11 @@ scrape_configs:
           model: "local-vllm"
           environment: "development"
 
-  # Local Ollama server metrics
-  # Ollama exposes metrics at /metrics by default
   - job_name: "ollama"
     scrape_interval: 15s
     scrape_timeout: 10s
-    metrics_path: "/metrics"
     static_configs:
-      - targets: ["host.docker.internal:11434"]
+      - targets: ["host.docker.internal:11435"]
         labels:
           instance: "ollama"
           model: "local-ollama"

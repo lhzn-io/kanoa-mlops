@@ -16,5 +16,19 @@ services:
               capabilities: [gpu]
     restart: unless-stopped
 
+  ollama-exporter:
+    build:
+      context: ./exporter
+      dockerfile: Dockerfile
+    container_name: kanoa-ollama-exporter
+    ports:
+      - "11435:8000"
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+      - SCRAPE_INTERVAL=15
+    depends_on:
+      - ollama
+    restart: unless-stopped
+
 volumes:
   ollama:
