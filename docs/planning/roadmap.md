@@ -20,6 +20,7 @@
 - **vLLM Serving**: Docker-based inference for open-source models.
   - [x] **Molmo 7B**: Vision-language model for chart/plot analysis.
   - [x] **Gemma 3**: Multimodal reasoning (4B, 12B, 27B).
+  - [x] **Olmo 3 32B Think**: Advanced reasoning and code generation model.
   - [ ] **GPT-OSS 20B**: OpenAI's open-weight reasoning model (fits in 16GB).
   - [ ] **GPT-OSS 120B**: Via free hosted providers (HuggingFace Inference, [gpt-oss.com](https://gpt-oss.com/)).
 - **Ollama Integration** (Issue #1):
@@ -79,11 +80,11 @@ graph TD
 | Platform | GPU Memory | Target Models | Status |
 | :--- | :--- | :--- | :--- |
 | **NVIDIA RTX 5080 (eGPU)** | 16GB | Molmo 7B (4-bit), Gemma 3 12B (4-bit), GPT-OSS 20B | [✓] Verified |
+| **NVIDIA Jetson Thor** | 128GB | Olmo 3 32B Think, Blackwell GPU, 1000 TFLOPS (FP8) | [✓] Verified |
 | **NVIDIA RTX 4090** | 24GB | Gemma 3 27B (4-bit), GPT-OSS 20B (FP16) | [ ] Planned |
 | **GCP L4** | 24GB | Molmo 7B, Gemma 3 12B (FP16), GPT-OSS 20B | [ ] Planned |
 | **GCP H100 / AMD MI300X** | 80GB | GPT-OSS 120B | [ ] Planned |
 | **NVIDIA Jetson Orin** | 64GB | Molmo 7B, Gemma 3 27B (Quantized) | [ ] Planned |
-| **NVIDIA Jetson Thor** | 128GB | Blackwell GPU, 1000 TFLOPS (FP8) | [ ] Planned |
 | **Free Hosted** | — | GPT-OSS 120B via HuggingFace Inference / gpt-oss.com | [ ] Planned |
 
 ## 5. Development Guidelines

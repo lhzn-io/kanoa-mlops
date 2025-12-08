@@ -90,6 +90,21 @@ docker compose -f docker/vllm/docker-compose.molmo.yml up -d
 curl http://localhost:8000/health
 ```
 
+#### Advanced Models
+
+For the Olmo3 32B Think model (requires significant GPU memory):
+
+```bash
+# Download model (~32GB) - requires Hugging Face authentication for gated models
+huggingface-cli download allenai/Olmo-3-32B-Think
+
+# Start vLLM server (optimized for Jetson Thor with 128GB Unified Memory)
+make serve-olmo3-32b
+
+# Verify
+curl http://localhost:8000/health
+```
+
 ## Choose Your Backend
 
 | Backend | Best For | Hardware | Throughput | Setup |
@@ -249,6 +264,7 @@ kanoa-mlops/
 | :--- | :--- | :--- | :--- | :--- |
 | Molmo 7B | 14GB | [✓] | — | Best vision performance |
 | Gemma 3 | 4B-27B | [✓] | [✓] | Excellent all-rounder |
+| Olmo 3 32B Think | 32GB | [✓] | — | Advanced reasoning, code generation |
 | LLaVa-Next | 7B-34B | [ ] | [✓] | Planned for vLLM |
 
 ### Text-Only Models (via Ollama)
@@ -261,6 +277,7 @@ Llama 3.1, Mistral, Qwen 2.5, and [100+ more](https://ollama.com/library).
 | :--- | :--- | :--- |
 | NVIDIA RTX (Desktop/Laptop) | [✓] Verified | RTX 3080+ recommended |
 | NVIDIA RTX (eGPU) | [✓] Verified | TB3/TB4 bandwidth sufficient |
+| NVIDIA Jetson Thor | [✓] Verified | 128GB Unified Memory, Blackwell GPU |
 | Apple Silicon | [✓] Ollama | M1/M2/M3 via Ollama |
 | GCP L4 GPU | [✓] Verified | 24GB VRAM, ~$0.70/hr |
 | Intel/AMD GPU | — | Not supported |
@@ -321,9 +338,10 @@ pip install -e /path/to/kanoa -e /path/to/kanoa-mlops
 - [✓] Ollama integration (Dec 2025)
 - [✓] CLI plugin system (Dec 2025)
 - [✓] NVIDIA DCGM monitoring (Dec 2025)
+- [✓] NVIDIA Jetson Thor support (Dec 2025)
 - [ ] PostgreSQL + pgvector for RAG
 - [ ] Kubernetes / Helm charts
-- [ ] NVIDIA Jetson support
+- [ ] NVIDIA Jetson Orin support
 
 ## Contributing
 

@@ -4,6 +4,7 @@
 .PHONY: help setup setup-user setup-dev lint test clean docs
 .PHONY: deploy destroy status ssh logs stop start list switch my-ip cost
 .PHONY: serve-ollama serve-monitoring stop-ollama stop-monitoring stop-all restart-ollama restart-monitoring
+.PHONY: serve-olmo3-32b stop-olmo3-32b restart-olmo3-32b
 
 # =============================================================================
 # Help
@@ -30,11 +31,14 @@ help:
 	@echo "  make serve-ollama       - Start Ollama (Docker)"
 	@echo "  make serve-monitoring   - Start Monitoring stack (Prometheus/Grafana)"
 	@echo "  make serve-molmo        - Start Molmo 7B (native vLLM)"
+	@echo "  make serve-olmo3-32b    - Start Olmo3 32B Think (Docker vLLM)"
 	@echo "  make stop-ollama        - Stop Ollama"
 	@echo "  make stop-monitoring    - Stop Monitoring stack"
+	@echo "  make stop-olmo3-32b     - Stop Olmo3 32B Think"
 	@echo "  make stop-all           - Stop all local services"
 	@echo "  make restart-ollama     - Restart Ollama"
 	@echo "  make restart-monitoring - Restart Monitoring stack"
+	@echo "  make restart-olmo3-32b  - Restart Olmo3 32B Think"
 	@echo ""
 	@echo "Development:"
 	@echo "  make setup-user         - Install user dependencies (pip)"
@@ -169,6 +173,13 @@ serve-monitoring:
 	@echo "Grafana: http://localhost:3000 (admin/admin)"
 	@echo "Prometheus: http://localhost:9090"
 
+serve-olmo3-32b:
+	@echo "Starting Olmo3 32B Think server..."
+	@docker compose -f docker/vllm/docker-compose.olmo3.yml up -d
+	@echo "Olmo3 32B Think is running at http://localhost:8000"
+	@echo "Model: allenai/Olmo-3-32B-Think"
+	@echo "Health check: curl http://localhost:8000/health"
+
 stop-ollama:
 	@echo "Stopping Ollama..."
 	@docker compose -f docker/ollama/docker-compose.ollama.yml down
@@ -179,15 +190,23 @@ stop-monitoring:
 	@docker compose -f docker/monitoring/docker-compose.yml down
 	@echo "Monitoring stopped."
 
+stop-olmo3-32b:
+	@echo "Stopping Olmo3 32B Think..."
+	@docker compose -f docker/vllm/docker-compose.olmo3.yml down
+	@echo "Olmo3 32B Think stopped."
+
 stop-all:
 	@echo "Stopping all local services..."
 	-@docker compose -f docker/ollama/docker-compose.ollama.yml down 2>/dev/null
 	-@docker compose -f docker/monitoring/docker-compose.yml down 2>/dev/null
+	-@docker compose -f docker/vllm/docker-compose.olmo3.yml down 2>/dev/null
 	@echo "All local services stopped."
 
 restart-ollama: stop-ollama serve-ollama
 
 restart-monitoring: stop-monitoring serve-monitoring
+
+restart-olmo3-32b: stop-olmo3-32b serve-olmo3-32b
 
 test-ollama:
 	@echo "Running Ollama integration tests..."
