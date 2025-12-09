@@ -6,7 +6,7 @@ from datetime import datetime
 
 import requests
 
-MODEL_NAME = "olmo3-32b-think"
+MODEL_NAME = "allenai/Olmo-3-32B-Think"
 API_URL = "http://localhost:8000/v1/chat/completions"
 
 
