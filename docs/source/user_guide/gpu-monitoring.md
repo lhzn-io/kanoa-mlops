@@ -192,7 +192,7 @@ watch -n 1 'curl -s http://localhost:8000/metrics | grep -E "(cache|memory|token
 2. **Baseline before optimization**: Record metrics before making changes
 3. **Use consistent load**: Keep GPU warm (previous inference) for fair comparisons
 4. **Document your setup**: GPU driver version, CUDA version, model config
-5. **Multiple runs**: Use the benchmark suite (`run_benchmark_suite.py`) to measure variance
+5. **Multiple runs**: Use the benchmark suite (`run_benchmark_suite_gemma3.py`) to measure variance
 
 ## Integration with Benchmark Suite
 
@@ -201,7 +201,7 @@ Our benchmark suite automatically collects performance metrics. For GPU monitori
 ```bash
 # Run benchmark suite for Gemma 3 12B (3 iterations)
 cd tests/integration
-python3 run_benchmark_suite.py
+python3 run_benchmark_suite_gemma3.py
 
 # Run benchmark suite for Molmo 7B (3 iterations)
 python3 run_benchmark_suite_molmo.py

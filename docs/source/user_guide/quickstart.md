@@ -152,7 +152,7 @@ cd tests/integration
 python3 run_benchmark_suite_ollama.py
 
 # Benchmark vLLM
-python3 run_benchmark_suite.py
+python3 run_benchmark_suite_gemma3.py
 ```
 
 See [Benchmarking Guide](../../../tests/integration/README.md) for detailed usage.

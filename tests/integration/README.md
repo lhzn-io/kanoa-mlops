@@ -15,7 +15,7 @@ The benchmarking suite provides:
 ### vLLM (Gemma 3)
 
 - **Single run**: `python3 test_vllm_gemma3_api.py`
-- **Benchmark suite**: `python3 run_benchmark_suite.py`
+- **Benchmark suite**: `python3 run_benchmark_suite_gemma3.py`
 - **Model**: Gemma 3 12B
 - **Port**: 8000
 

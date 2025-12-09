@@ -136,10 +136,35 @@ def main():
             "max": max(test_throughputs),
         }
 
-    with open("benchmark_statistics_molmo.json", "w") as f:
-        json.dump(aggregated, f, indent=2)
+    output_path = Path(__file__).parent / "benchmark_statistics_molmo.json"
 
-    print("\n[INFO] Statistics saved to: benchmark_statistics_molmo.json")
+    # Load existing results if they exist
+    existing_data = []
+    if output_path.exists():
+        try:
+            with open(output_path, "r") as f:
+                content = json.load(f)
+                if isinstance(content, list):
+                    existing_data = content
+                elif isinstance(content, dict):
+                    existing_data = [content]
+        except json.JSONDecodeError:
+            pass
+
+    # Remove any existing entry for this platform to avoid duplicates
+    existing_data = [
+        entry
+        for entry in existing_data
+        if entry.get("platform") != aggregated["platform"]
+    ]
+
+    # Append new results
+    existing_data.append(aggregated)
+
+    with open(output_path, "w") as f:
+        json.dump(existing_data, f, indent=2)
+
+    print(f"\n[INFO] Statistics saved to: {output_path}")
 
 
 if __name__ == "__main__":
