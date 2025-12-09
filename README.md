@@ -2,6 +2,10 @@
 
 **The infrastructure backbone for privacy-first AI interpretation.**
 
+[![Tests](https://github.com/lhzn-io/kanoa-mlops/actions/workflows/pre-commit.yml/badge.svg)](https://github.com/lhzn-io/kanoa-mlops/actions/workflows/pre-commit.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+
 `kanoa-mlops` provides the local compute layer for the [`kanoa`](https://github.com/lhzn-io/kanoa) library — enabling you to interpret data science outputs (plots, tables, models) using state-of-the-art vision-language models, all running on your own hardware.
 
 - **Privacy First** — Your data never leaves your machine
