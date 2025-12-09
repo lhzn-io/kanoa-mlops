@@ -215,7 +215,7 @@ Each suite includes:
 
 Results are saved to:
 
-- `benchmark_statistics.json` - Gemma 3 12B results
+- `benchmark_statistics_gemma3.json` - Gemma 3 12B results
 - `benchmark_statistics_molmo.json` - Molmo 7B results
 
 ### Benchmark Results (RTX 5080 16GB eGPU)

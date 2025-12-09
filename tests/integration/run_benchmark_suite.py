@@ -135,10 +135,10 @@ def main():
             "max": max(test_throughputs),
         }
 
-    with open("benchmark_statistics.json", "w") as f:
+    with open("benchmark_statistics_gemma3.json", "w") as f:
         json.dump(aggregated, f, indent=2)
 
-    print("\n[INFO] Statistics saved to: benchmark_statistics.json")
+    print("\n[INFO] Statistics saved to: benchmark_statistics_gemma3.json")
 
 
 if __name__ == "__main__":
