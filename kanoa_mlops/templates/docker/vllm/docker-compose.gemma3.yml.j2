@@ -16,32 +16,21 @@ services:
     environment:
       - CUDA_VISIBLE_DEVICES=0
       - HF_HOME=/root/.cache/huggingface
-    command:
-      - --model
-      - ${MODEL_NAME:-google/gemma-3-12b-it}
-      - --host
-      - 0.0.0.0
-      - --port
-      - "8000"
-      - --served-model-name
-      - ${SERVED_MODEL_NAME:-google/gemma-3-12b-it}
-      - --trust-remote-code
-      - --max-model-len
-      - "8192"
-      - --max-num-seqs
-      - "5" # Conservative limit for single-user local dev
-      - --gpu-memory-utilization
-      - "0.8" # Lowered to 0.8 to prevent hangs with concurrent clients
-      # Performance Tuning for {{ arch_config.description }}
-      - --kv-cache-dtype
-      - fp8  # Reduces VRAM usage, increases context length
-      - --enable-chunked-prefill
+    command: >
+      vllm serve
+      --model ${MODEL_NAME:-google/gemma-3-12b-it}
+      --host 0.0.0.0
+      --port 8000
+      --served-model-name ${SERVED_MODEL_NAME:-google/gemma-3-12b-it}
+      --trust-remote-code
+      --max-model-len 8192
+      --max-num-seqs 5
+      --gpu-memory-utilization 0.8
+      --kv-cache-dtype fp8
+      --enable-chunked-prefill
 {% if arch_config.platform_name != "jetson-thor" %}
-      # 4-bit quantization recommended for VRAM-constrained systems
-      - --quantization
-      - bitsandbytes
-      - --load-format
-      - bitsandbytes
+      --quantization bitsandbytes
+      --load-format bitsandbytes
 {% endif %}
     deploy:
       resources:
