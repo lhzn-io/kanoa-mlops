@@ -16,11 +16,15 @@ sys.path.append(str(Path(__file__).parents[2]))
 try:
     from kanoa_mlops.arch_detect import detect_architecture
 except ImportError:
+
     def detect_architecture():
         """Fallback if import fails."""
+
         class MockConfig:
             description = "Unknown Platform"
+
         return MockConfig()
+
 
 import matplotlib.pyplot as plt
 import numpy as np
