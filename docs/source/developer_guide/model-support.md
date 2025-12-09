@@ -42,10 +42,13 @@ huggingface-cli download allenai/OLMo-3-32B-Think \
   --local-dir ~/.cache/huggingface/hub/models--allenai--OLMo-3-32B-Think
 
 # Start vLLM server
+# Note: Olmo 3 requires --enforce-eager and disabling chunked prefill to avoid garbage output
 vllm serve allenai/OLMo-3-32B-Think \
   --port 8000 \
   --gpu-memory-utilization 0.85 \
-  --max-model-len 4096
+  --max-model-len 4096 \
+  --enforce-eager \
+  --kv-cache-dtype auto
 
 # Test
 curl http://localhost:8000/v1/chat/completions \

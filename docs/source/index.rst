@@ -15,6 +15,7 @@ kanoa-mlops Documentation
 
    user_guide/gpu-monitoring
    user_guide/performance-analysis
+   user_guide/model-troubleshooting
 
 .. toctree::
    :maxdepth: 2
