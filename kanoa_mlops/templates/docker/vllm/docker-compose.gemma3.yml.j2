@@ -13,6 +13,9 @@ services:
       - "8000:8000" # Standard vLLM port (use 8001:8000 if running alongside Molmo)
     volumes:
       - ${HF_HOME:-~/.cache/huggingface}:/root/.cache/huggingface:rw
+{% if arch_config.platform_name == "jetson-thor" %}
+      - ${HF_HOME:-~/.cache/huggingface}:/data/models/huggingface:rw
+{% endif %}
     environment:
       - CUDA_VISIBLE_DEVICES=0
       - HF_HOME=/root/.cache/huggingface

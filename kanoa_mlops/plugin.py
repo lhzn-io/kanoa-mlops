@@ -324,9 +324,9 @@ def handle_init(args) -> None:
     console.print(f"[green]  vLLM Image: {arch_config.vllm_image}[/green]")
     console.print("")
     console.print("Next steps:")
-    console.print("  kanoa serve ollama      # Start Ollama server")
-    console.print("  kanoa serve monitoring  # Start Prometheus + Grafana")
-    console.print("  kanoa stop              # Stop all services")
+    console.print("  kanoa serve             # Interactive service selection")
+    console.print("  kanoa list              # Show available models")
+    console.print("  kanoa status            # Check running services")
 
 
 def _check_model_cached(model_name: str) -> tuple[bool, str]:
