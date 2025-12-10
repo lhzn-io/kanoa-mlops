@@ -12,6 +12,7 @@ dependencies = [
     "toml>=0.10.0",           # Config file parsing
     "huggingface-hub>=0.20.0", # Model downloads
     "jinja2>=3.1.0",          # Template rendering for architecture-aware configs
+    "llm>=0.15",              # Simon Willison's LLM CLI for local/remote models
 ]
 
 # Optional dependency groups

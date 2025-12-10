@@ -16,6 +16,10 @@ services:
     environment:
       - CUDA_VISIBLE_DEVICES=0
       - HF_HOME=/root/.cache/huggingface
+      - TRANSFORMERS_CACHE=/root/.cache/huggingface
+      - TRANSFORMERS_VERBOSITY=info
+      - HF_HUB_VERBOSITY=info
+      - HF_HUB_OFFLINE=${HF_HUB_OFFLINE:-0}
     command: >
       vllm serve
       --model ${MODEL_NAME:-allenai/Olmo-3-32B-Think}
@@ -25,7 +29,7 @@ services:
       --trust-remote-code
       --max-model-len 8192
       --max-num-seqs 5
-      --gpu-memory-utilization 0.9
+      --gpu-memory-utilization 0.8
       --kv-cache-dtype fp8
       --enable-chunked-prefill
       --dtype bfloat16

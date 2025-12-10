@@ -1,0 +1,39 @@
+# Local vLLM/Ollama models configuration for llm CLI
+# This configures the llm tool to connect to your locally deployed models
+#
+# Installation:
+#   cp examples/llm-local-models.yaml ~/.config/io.datasette.llm/extra-openai-models.yaml
+#
+# Usage:
+#   llm models list                      # See available models
+#   llm models default olmo3-7b-think    # Set default
+#   llm "Hello!"                         # Use default model
+
+# Olmo3 7B Think (vLLM on port 8000)
+- model_id: olmo3-7b-think
+  model_name: allenai/Olmo-3-7B-Think-1125
+  api_base: "http://localhost:8000"
+  aliases: ["olmo3"]
+
+# Gemma 3 12B (vLLM on port 8000)
+- model_id: gemma3-12b
+  model_name: google/gemma-3-12b-it
+  api_base: "http://localhost:8000"
+  aliases: ["gemma3"]
+
+# Molmo 7B (vLLM on port 8000)
+- model_id: molmo-7b
+  model_name: allenai/Molmo-7B-D-0924
+  api_base: "http://localhost:8000"
+  aliases: ["molmo"]
+  vision: true
+
+# Ollama models (port 11434)
+- model_id: ollama-gemma3-4b
+  model_name: gemma3:4b
+  api_base: "http://localhost:11434"
+  aliases: ["gemma3-ollama"]
+
+- model_id: ollama-gemma3-12b
+  model_name: gemma3:12b
+  api_base: "http://localhost:11434"

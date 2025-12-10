@@ -16,6 +16,10 @@ services:
     environment:
       - CUDA_VISIBLE_DEVICES=0
       - HF_HOME=/root/.cache/huggingface
+      - TRANSFORMERS_CACHE=/root/.cache/huggingface
+      - TRANSFORMERS_VERBOSITY=info
+      - HF_HUB_VERBOSITY=info
+      - HF_HUB_OFFLINE=${HF_HUB_OFFLINE:-0}
     command: >
       vllm serve
       --model ${MODEL_NAME:-google/gemma-3-12b-it}

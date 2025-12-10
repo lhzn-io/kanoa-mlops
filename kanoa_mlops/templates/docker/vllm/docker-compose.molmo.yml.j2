@@ -15,8 +15,12 @@ services:
     environment:
       - CUDA_VISIBLE_DEVICES=0
       - HF_HOME=/root/.cache/huggingface
+      - TRANSFORMERS_CACHE=/root/.cache/huggingface
       - TF_FORCE_GPU_ALLOW_GROWTH=true
       - TF_CPP_MIN_LOG_LEVEL=3
+      - TRANSFORMERS_VERBOSITY=info
+      - HF_HUB_VERBOSITY=info
+      - HF_HUB_OFFLINE=${HF_HUB_OFFLINE:-0}
     command: >
       vllm serve
       --model ${MODEL_NAME:-allenai/Molmo-7B-D-0924}

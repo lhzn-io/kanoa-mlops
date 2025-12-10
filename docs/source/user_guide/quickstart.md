@@ -93,6 +93,44 @@ curl http://localhost:11434/v1/chat/completions \
   }'
 ```
 
+#### Console Mode: Using llm CLI
+
+For headless environments (SSH, Jetson Thor, remote workstations), the [`llm` CLI tool](https://llm.datasette.io/) by Simon Willison provides a convenient interface to your local models.
+
+**Quick Setup:**
+
+```bash
+# Install llm
+pip install llm
+
+# Copy local models config to llm directory
+cp examples/llm-local-models.yaml ~/.config/io.datasette.llm/extra-openai-models.yaml
+
+# Verify models are available
+llm models list | grep -E "olmo3|gemma3|molmo"
+
+# Set your local model as default
+llm models default olmo3-7b-think
+
+# Now you can use llm without the -m flag
+llm "What is CUDA?"
+```
+
+**Manual Usage (without config file):**
+
+```bash
+# Connect to vLLM server
+llm -m openai/olmo3-7b-think -o api_base http://localhost:8000/v1 "Explain CUDA"
+
+# Use with pipes for quick analysis
+cat debug.log | llm -m openai/gemma3-12b -o api_base http://localhost:8000/v1 "Summarize errors"
+
+# Interactive chat mode
+llm chat -m openai/olmo3-7b-think -o api_base http://localhost:8000/v1
+```
+
+⚠️ **Note**: The config file approach is recommended for persistent setups. See `examples/llm-local-models.yaml` for the full configuration template.
+
 ### Option 2: vLLM (Advanced)
 
 vLLM provides higher throughput for production workloads.

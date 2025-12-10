@@ -24,6 +24,11 @@ from kanoa_mlops.config import get_mlops_path, get_templates_path, set_mlops_pat
 console = Console()
 
 
+def _is_tty() -> bool:
+    """Check if running in an interactive terminal."""
+    return sys.stdin.isatty() and sys.stdout.isatty()
+
+
 # Detect which compose client is available and cache it
 def _detect_compose_client() -> list[str] | None:
     """Return the base command for docker compose: either ['docker','compose'] or ['docker-compose'].
@@ -142,7 +147,7 @@ def resolve_mlops_path() -> Path | None:
 
 
 def run_docker_compose(
-    compose_file: Path, action: str = "up", detach: bool = True
+    compose_file: Path, action: str = "up", detach: bool = True, env: dict | None = None
 ) -> bool:
     """
     Run docker-compose command.
@@ -151,6 +156,7 @@ def run_docker_compose(
         compose_file: Path to docker-compose.yml
         action: 'up' or 'down'
         detach: Run in detached mode (for 'up')
+        env: Optional environment variables to pass to docker-compose
 
     Returns:
         True on success, False on failure.
@@ -167,7 +173,14 @@ def run_docker_compose(
         cmd.append("-d")
 
     try:
-        subprocess.run(cmd, check=True)
+        # Merge environment variables if provided
+        run_env = None
+        if env:
+            import os
+
+            run_env = os.environ.copy()
+            run_env.update(env)
+        subprocess.run(cmd, check=True, env=run_env)
         return True
     except subprocess.CalledProcessError:
         # DIAGNOSTIC: Check for permission issues (docker group)
@@ -316,6 +329,397 @@ def handle_init(args) -> None:
     console.print("  kanoa stop              # Stop all services")
 
 
+def _check_model_cached(model_name: str) -> tuple[bool, str]:
+    """
+    Check if a HuggingFace model is already cached locally and fully downloaded.
+
+    Args:
+        model_name: HuggingFace model ID (e.g., 'allenai/Olmo-3-7B-Think')
+
+    Returns:
+        Tuple of (is_complete, status_message):
+            - (True, "complete") if model is fully downloaded
+            - (False, "incomplete") if model exists but has incomplete files
+            - (False, "missing") if model directory doesn't exist
+    """
+    import os
+    from pathlib import Path
+
+    # Check HF_HOME or default cache location
+    hf_home = os.environ.get("HF_HOME", os.path.expanduser("~/.cache/huggingface"))
+    model_cache_name = model_name.replace("/", "--")
+    model_dir = Path(hf_home) / "hub" / f"models--{model_cache_name}"
+
+    if not model_dir.exists():
+        return False, "missing"
+
+    # Check for incomplete downloads
+    blobs_dir = model_dir / "blobs"
+    if blobs_dir.exists():
+        incomplete_files = list(blobs_dir.glob("*.incomplete"))
+        if incomplete_files:
+            return False, "incomplete"
+
+    return True, "complete"
+
+
+def _list_cached_models() -> list[dict]:
+    """
+    List all cached HuggingFace models.
+
+    Returns:
+        List of dicts with model info: {name, path, status, size_gb}
+    """
+    import os
+    from pathlib import Path
+
+    hf_home = os.environ.get("HF_HOME", os.path.expanduser("~/.cache/huggingface"))
+    hub_dir = Path(hf_home) / "hub"
+
+    if not hub_dir.exists():
+        return []
+
+    models = []
+    for model_dir in hub_dir.glob("models--*"):
+        # Convert directory name to model ID
+        model_name = model_dir.name.replace("models--", "").replace("--", "/")
+
+        # Check completion status
+        is_complete, status = _check_model_cached(model_name)
+
+        # Calculate approximate size
+        size_bytes = sum(f.stat().st_size for f in model_dir.rglob("*") if f.is_file())
+        size_gb = size_bytes / (1024**3)
+
+        models.append(
+            {
+                "name": model_name,
+                "path": model_dir,
+                "status": status,
+                "size_gb": size_gb,
+                "complete": is_complete,
+            }
+        )
+
+    return sorted(models, key=lambda x: x["name"])
+
+
+def _list_ollama_models() -> list[dict]:
+    """
+    List locally available Ollama models from the manifest directory.
+
+    Returns:
+        List of dicts with model info: {name, size_gb}
+    """
+    import json
+    import os
+    from pathlib import Path
+
+    ollama_home = os.environ.get("OLLAMA_MODELS", os.path.expanduser("~/.ollama"))
+    manifests_dir = Path(ollama_home) / "models" / "manifests"
+
+    if not manifests_dir.exists():
+        return []
+
+    models = []
+    
+    # Iterate through registry.ollama.ai/library/ and other registries
+    for registry_dir in manifests_dir.rglob("*"):
+        if registry_dir.is_dir():
+            continue
+        
+        # Get relative path from manifests dir to construct model name
+        rel_path = registry_dir.relative_to(manifests_dir)
+        parts = rel_path.parts
+        
+        # Skip if not enough path parts
+        if len(parts) < 3:
+            continue
+        
+        # Construct model name (registry/namespace/model:tag)
+        # For ollama.ai models: library/modelname/tag -> modelname:tag
+        if "library" in parts:
+            idx = parts.index("library")
+            if idx + 2 < len(parts):
+                model_name = f"{parts[idx+1]}:{parts[idx+2]}"
+            else:
+                continue
+        else:
+            # For other registries, use full path
+            model_name = "/".join(parts)
+        
+        # Try to get size from manifest
+        size_gb = 0
+        try:
+            with open(registry_dir, "r") as f:
+                manifest = json.load(f)
+                # Ollama manifests have layers with sizes
+                if "layers" in manifest:
+                    size_bytes = sum(layer.get("size", 0) for layer in manifest["layers"])
+                    size_gb = size_bytes / (1024**3)
+        except (json.JSONDecodeError, KeyError, FileNotFoundError):
+            pass
+        
+        models.append({
+            "name": model_name,
+            "size_gb": size_gb,
+        })
+    
+    return sorted(models, key=lambda x: x["name"])
+
+
+def _download_model_if_needed(model_name: str) -> bool:
+    """
+    Check if model is cached and complete, error if not.
+
+    Args:
+        model_name: HuggingFace model ID (e.g., 'allenai/Olmo-3-7B-Think')
+
+    Returns:
+        True if model is available and complete, False if missing or incomplete
+    """
+    console.print(f"[cyan]Checking cache for model: {model_name}...[/cyan]")
+
+    is_complete, status = _check_model_cached(model_name)
+
+    if is_complete:
+        console.print(f"[green]✔ Model {model_name} found in cache[/green]")
+        return True
+    elif status == "incomplete":
+        console.print(f"[red]✘ Model {model_name} download is incomplete[/red]")
+        console.print("")
+        console.print("[yellow]Download in progress or interrupted. Please:[/yellow]")
+        console.print("  [bold]1. Check if download is still running[/bold]")
+        console.print(
+            f"  [bold]2. Restart the download: hf download {model_name}[/bold]"
+        )
+        console.print("")
+        console.print("The HuggingFace CLI will resume from where it left off.")
+        return False
+    else:  # status == "missing"
+        console.print(f"[red]✘ Model {model_name} not found in cache[/red]")
+        console.print("")
+        console.print("[yellow]Please download the model first:[/yellow]")
+        console.print(f"  [bold]hf download {model_name}[/bold]")
+        console.print("")
+        console.print("Or download to a specific cache directory:")
+        console.print(
+            f"  [bold]hf download {model_name} --cache-dir ~/.cache/huggingface[/bold]"
+        )
+        return False
+
+
+def _select_service_interactive(service_map: dict) -> str | None:
+    """
+    Show interactive menu to select a service.
+
+    Args:
+        service_map: Dict of {service_name: compose_file_path}
+
+    Returns:
+        Selected service name or None if cancelled
+    """
+    from rich.prompt import Prompt
+    from rich.table import Table
+
+    # Categorize services
+    infrastructure = []
+    ml_runtimes = []
+    vllm_families = []
+
+    for name in service_map:
+        if name == "monitoring":
+            infrastructure.append(name)
+        elif name == "ollama":
+            ml_runtimes.append(name)
+        elif name.startswith("vllm-"):
+            vllm_families.append(name.replace("vllm-", ""))
+
+    table = Table(title="Available Services")
+    table.add_column("#", style="cyan", width=4)
+    table.add_column("Service", style="green")
+    table.add_column("Type", style="blue")
+
+    choices = []
+    idx = 1
+
+    if infrastructure:
+        for svc in infrastructure:
+            table.add_row(str(idx), svc, "infrastructure")
+            choices.append((idx, svc))
+            idx += 1
+
+    if ml_runtimes:
+        for svc in ml_runtimes:
+            table.add_row(str(idx), svc, "ML runtime")
+            choices.append((idx, svc))
+            idx += 1
+
+    if vllm_families:
+        table.add_row(str(idx), "vllm (with model selection)", "ML runtime")
+        choices.append((idx, "vllm"))
+        idx += 1
+
+    console.print(table)
+    choice = Prompt.ask(
+        "Select service",
+        choices=[str(i) for i, _ in choices] + ["q"],
+        default="q",
+    )
+
+    if choice == "q":
+        return None
+
+    for idx, svc in choices:
+        if idx == int(choice):
+            return svc
+
+    return None
+
+
+def _select_vllm_family_interactive(service_map: dict) -> str | None:
+    """
+    Show interactive menu to select a vLLM model family.
+
+    Args:
+        service_map: Dict of {service_name: compose_file_path}
+
+    Returns:
+        Selected family name (e.g., 'gemma3') or None if cancelled
+    """
+    from rich.prompt import Prompt
+    from rich.table import Table
+
+    vllm_families = [k.replace("vllm-", "") for k in service_map.keys() if k.startswith("vllm-")]
+
+    if not vllm_families:
+        console.print("[red]No vLLM families configured.[/red]")
+        return None
+
+    table = Table(title="vLLM Model Families")
+    table.add_column("#", style="cyan", width=4)
+    table.add_column("Family", style="green")
+    table.add_column("Description", style="blue")
+
+    family_desc = {
+        "olmo3": "Allen AI OLMo 3 (text)",
+        "gemma3": "Google Gemma 3 (multimodal)",
+        "molmo": "Allen AI Molmo (multimodal vision)",
+    }
+
+    for idx, family in enumerate(sorted(vllm_families), 1):
+        desc = family_desc.get(family, "Model family")
+        table.add_row(str(idx), family, desc)
+
+    console.print(table)
+    choice = Prompt.ask(
+        "Select model family",
+        choices=[str(i) for i in range(1, len(vllm_families) + 1)] + ["q"],
+        default="q",
+    )
+
+    if choice == "q":
+        return None
+
+    return sorted(vllm_families)[int(choice) - 1]
+
+
+def _select_model_interactive(family: str | None = None) -> str | None:
+    """
+    Show interactive menu to select a cached model.
+
+    Args:
+        family: Optional family filter (e.g., 'gemma3', 'molmo', 'olmo3')
+
+    Returns:
+        Selected model name or None if cancelled
+    """
+    from rich.prompt import Prompt
+    from rich.table import Table
+
+    models = _list_cached_models()
+
+    # Filter by family if specified
+    if family:
+        family_patterns = {
+            "gemma3": ["google/gemma-3", "google/gemma3"],
+            "molmo": ["allenai/molmo", "allenai/Molmo"],
+            "olmo3": ["allenai/olmo-3", "allenai/Olmo-3"],
+        }
+        patterns = family_patterns.get(family.lower(), [])
+        if patterns:
+            models = [
+                m for m in models 
+                if any(p.lower() in m["name"].lower() for p in patterns)
+            ]
+
+    if not models:
+        if family:
+            console.print(
+                f"[yellow]No cached models found for {family} family[/yellow]"
+            )
+            console.print("\nDownload a model first:")
+            if family == "gemma3":
+                console.print("  [bold]hf download google/gemma-3-12b-it[/bold]")
+            elif family == "molmo":
+                console.print("  [bold]hf download allenai/Molmo-7B-D-0924[/bold]")
+            elif family == "olmo3":
+                console.print("  [bold]hf download allenai/Olmo-3-7B-Think[/bold]")
+        else:
+            console.print(
+                "[yellow]No cached models found in ~/.cache/huggingface/hub[/yellow]"
+            )
+            console.print("\nDownload a model first:")
+            console.print("  [bold]hf download allenai/Olmo-3-7B-Think[/bold]")
+        return None
+
+    # Show table of available models
+    title = f"Cached Models - {family}" if family else "Cached Models"
+    table = Table(title=title)
+    table.add_column("#", style="cyan", width=4)
+    table.add_column("Model", style="green")
+    table.add_column("Size", justify="right", style="blue")
+    table.add_column("Status", style="yellow")
+
+    complete_models = []
+    for idx, model in enumerate(models, 1):
+        status_icon = "✔" if model["complete"] else "✘"
+        status_text = f"{status_icon} {model['status']}"
+
+        if model["complete"]:
+            complete_models.append((idx, model["name"]))
+            table.add_row(
+                str(idx), model["name"], f"{model['size_gb']:.1f} GB", status_text
+            )
+
+    if not complete_models:
+        console.print("[yellow]No complete models found[/yellow]")
+        console.print("\nComplete a model download first:")
+        console.print("  [bold]hf download <model-name>[/bold]")
+        return None
+
+    console.print(table)
+    console.print("")
+
+    # Prompt for selection
+    choice = Prompt.ask(
+        "Select model number (or 'q' to quit)",
+        choices=[str(i) for i, _ in complete_models] + ["q"],
+        default="q",
+    )
+
+    if choice == "q":
+        return None
+
+    # Find selected model
+    selected_idx = int(choice)
+    for idx, model_name in complete_models:
+        if idx == selected_idx:
+            return model_name
+
+    return None
+
+
 def handle_serve(args) -> None:
     """Handle the 'serve' command by starting docker-compose services."""
     mlops_path = resolve_mlops_path()
@@ -325,16 +729,210 @@ def handle_serve(args) -> None:
         console.print("Run: kanoa init mlops --dir ./my-project")
         sys.exit(1)
 
-    service = args.service
+    runtime = getattr(args, "runtime", None)
+    model_family = getattr(args, "model_family", None)
     service_map = get_initialized_services(mlops_path)
+    
+    # If no runtime specified and TTY available, start interactive flow
+    if runtime is None and _is_tty():
+        console.print("")
+        console.print("[bold cyan]kanoa serve[/bold cyan] - MLOps Service Manager\n")
+        
+        runtime = _select_service_interactive(service_map)
+        if runtime is None:
+            console.print("[yellow]Cancelled.[/yellow]")
+            sys.exit(0)
+        
+        console.print("")
+    
+    # If no runtime, show help and exit
+    if runtime is None:
+        # Categorize services
+        infrastructure = []
+        vllm_families = []
+        ml_runtimes = []
+        
+        for name in service_map:
+            if name == "monitoring":
+                infrastructure.append(name)
+            elif name.startswith("vllm-"):
+                vllm_families.append(name.replace("vllm-", ""))
+            elif name == "ollama":
+                ml_runtimes.append(name)
+            else:
+                # Fallback for unknown services
+                ml_runtimes.append(name)
+        
+        # Display categorized help
+        console.print("[bold cyan]kanoa serve[/bold cyan] - MLOps Service Manager\n")
+        
+        if infrastructure:
+            console.print("[bold]Infrastructure:[/bold]")
+            console.print("  • monitoring      - Prometheus + Grafana")
+            console.print("")
+        
+        if ml_runtimes or vllm_families:
+            console.print("[bold]ML Runtimes:[/bold]")
+            for name in ml_runtimes:
+                desc = "Ollama server (manage models: ollama pull/list)" if name == "ollama" else "ML runtime"
+                console.print(f"  • {name:15} - {desc}")
+            console.print(f"  • vllm          - vLLM inference server")
+            console.print("")
+        
+        if vllm_families:
+            console.print("[bold]vLLM Model Families:[/bold]")
+            family_desc = {
+                "olmo3": "Allen AI OLMo 3 (text)",
+                "gemma3": "Google Gemma 3 (multimodal)",
+                "molmo": "Allen AI Molmo (multimodal vision)"
+            }
+            for name in sorted(vllm_families):
+                desc = family_desc.get(name, "Model family")
+                console.print(f"  • {name:15} - {desc}")
+            console.print("")
+        
+        console.print("[bold]Usage:[/bold]")
+        console.print("  kanoa serve <runtime>                          # Start runtime")
+        console.print("  kanoa serve vllm <family> --model <id>         # Specific model")
+        console.print("  kanoa serve all                                # Start all services")
+        console.print("")
+        console.print("[bold]Examples:[/bold]")
+        console.print("  kanoa serve monitoring")
+        console.print("  kanoa serve ollama")
+        console.print("  kanoa serve vllm gemma3 --model google/gemma-3-12b-it")
+        return
+    
+    # Construct service name from runtime and model_family
+    service = None
+    if runtime in ["monitoring", "all"]:
+        # These are standalone services
+        service = runtime
+    elif runtime == "ollama":
+        # Ollama manages its own models
+        service = "ollama"
+    elif runtime == "vllm":
+        # vLLM requires a model family
+        if not model_family:
+            # Missing model family - handle based on TTY
+            if _is_tty():
+                model_family = _select_vllm_family_interactive(service_map)
+                if model_family is None:
+                    console.print("[yellow]Cancelled.[/yellow]")
+                    sys.exit(0)
+                console.print("")
+            else:
+                console.print("[red]Error: model family required for vLLM[/red]")
+                console.print("\nUsage: kanoa serve vllm <model-family> [--model <specific-model>]")
+                console.print("\nAvailable families:")
+                for k in service_map.keys():
+                    if k.startswith("vllm-"):
+                        console.print(f"  • {k.replace('vllm-', '')}")
+                sys.exit(1)
+        service = f"vllm-{model_family}"
+    else:
+        # Unknown runtime - might be legacy flat service name
+        service = runtime
+
+    # Prepare environment variables for docker-compose
+    compose_env = {}
+
+    # Set offline mode if requested
+    if hasattr(args, "offline") and args.offline:
+        compose_env["HF_HUB_OFFLINE"] = "1"
+        console.print("[cyan]Running in offline mode (HF_HUB_OFFLINE=1)[/cyan]")
+
+    # Handle model selection for vLLM services
+    model_name = None
+    if hasattr(args, "model") and args.model:
+        model_name = args.model
+    elif service and service.startswith("vllm-"):
+        # No model specified for vLLM service
+        if _is_tty():
+            # Interactive mode - show selector with family filter
+            console.print("[cyan]No model specified, showing available models...[/cyan]")
+            console.print("")
+            # Extract family from service name (e.g., vllm-gemma3 -> gemma3)
+            family = service.replace("vllm-", "") if service.startswith("vllm-") else None
+            model_name = _select_model_interactive(family=family)
+            if not model_name:
+                console.print("[yellow]No model selected, exiting.[/yellow]")
+                sys.exit(0)
+        else:
+            # Non-interactive mode - show error
+            family_name = service.replace("vllm-", "")
+            console.print(f"[red]Error: --model required for vLLM {family_name}[/red]")
+            console.print(f"\nUsage: kanoa serve vllm {family_name} --model <model-id>")
+            console.print("\nTo see available cached models, run interactively:")
+            console.print(f"  kanoa serve vllm {family_name}")
+            sys.exit(1)
+
+    if model_name:
+        compose_env["MODEL_NAME"] = model_name
+        compose_env["SERVED_MODEL_NAME"] = model_name
+
+        # Check if model is cached for vLLM services
+        if service and service.startswith("vllm-"):
+            if not _download_model_if_needed(model_name):
+                sys.exit(1)
 
     if service is None:
-        console.print("[bold]Available Services:[/bold]")
+        # Categorize services
+        infrastructure = []
+        vllm_families = []
+        ml_runtimes = []
+        
         for name in service_map:
-            console.print(f"  • {name}")
+            if name == "monitoring":
+                infrastructure.append(name)
+            elif name.startswith("vllm-"):
+                vllm_families.append(name.replace("vllm-", ""))
+            elif name == "ollama":
+                ml_runtimes.append(name)
+            else:
+                # Fallback for unknown services
+                ml_runtimes.append(name)
+        
+        # Display categorized help
+        console.print("[bold cyan]kanoa serve[/bold cyan] - MLOps Service Manager\n")
+        
+        if infrastructure:
+            console.print("[bold]Infrastructure:[/bold]")
+            console.print("  • monitoring      - Prometheus + Grafana")
+            console.print("")
+        
+        if ml_runtimes or vllm_families:
+            console.print("[bold]ML Runtimes:[/bold]")
+            for name in ml_runtimes:
+                desc = "Ollama server (manage models: ollama pull/list)" if name == "ollama" else "ML runtime"
+                console.print(f"  • {name:15} - {desc}")
+            console.print(f"  • vllm          - vLLM inference server")
+            console.print("")
+        
+        if vllm_families:
+            console.print("[bold]vLLM Model Families:[/bold]")
+            family_desc = {
+                "olmo3": "Allen AI OLMo 3 (text)",
+                "gemma3": "Google Gemma 3 (multimodal)",
+                "molmo": "Allen AI Molmo (multimodal vision)"
+            }
+            for name in sorted(vllm_families):
+                desc = family_desc.get(name, "Model family")
+                console.print(f"  • {name:15} - {desc}")
+            console.print("")
+        
+        console.print("[bold]Usage:[/bold]")
+        console.print("  kanoa serve <runtime>                          # Start runtime")
+        console.print("  kanoa serve vllm <family> --model <id>         # Specific model")
+        if _is_tty():
+            console.print("  kanoa serve vllm <family>                      # Interactive selection")
+        console.print("  kanoa serve all                                # Start all services")
         console.print("")
-        console.print("Run [bold]kanoa serve <service>[/bold] to start one.")
-        console.print("Run [bold]kanoa serve all[/bold] to start everything.")
+        console.print("[bold]Examples:[/bold]")
+        console.print("  kanoa serve monitoring")
+        console.print("  kanoa serve ollama")
+        console.print("  kanoa serve vllm gemma3 --model google/gemma-3-12b-it")
+        if _is_tty():
+            console.print("  kanoa serve vllm molmo  # Shows interactive model selector")
         return
 
     if service == "all":
@@ -369,7 +967,7 @@ def handle_serve(args) -> None:
                     )
                     continue
 
-            run_docker_compose(compose_file, "up")
+            run_docker_compose(compose_file, "up", env=compose_env)
     else:
         compose_file = service_map.get(service)
         if not compose_file or not compose_file.exists():
@@ -400,7 +998,7 @@ def handle_serve(args) -> None:
                 console.print(f"[red]Failed to build images for {service}[/red]")
                 sys.exit(1)
 
-        if not run_docker_compose(compose_file, "up"):
+        if not run_docker_compose(compose_file, "up", env=compose_env):
             console.print(f"[red]Failed to start {service}[/red]")
             sys.exit(1)
 
@@ -587,65 +1185,95 @@ def handle_list(args) -> None:
         console.print("[red]Error: kanoa-mlops not initialized.[/red]")
         return
 
-    console.print("[bold]Available Services:[/bold]")
-    services = get_initialized_services(mlops_path)
-    if not services:
-        console.print("  [dim]No services found in docker/ directory[/dim]")
-    else:
-        for name, path in services.items():
-            console.print(f"  • {name:<15} [dim]({path.relative_to(mlops_path)})[/dim]")
-
-    console.print("")
-    console.print("[bold]Ollama Models:[/bold]")
-
-    # Check if Ollama is running first
-    try:
-        # Ensure Ollama compose file is configured
-        ollama_compose = services.get("ollama")
-        if not ollama_compose or not ollama_compose.exists():
-            console.print("  [dim]Ollama service not configured[/dim]")
-            return
-
-        if COMPOSE_CMD is None:
-            console.print("  [dim]Docker Compose not available to query Ollama[/dim]")
-            return
-
-        # Try to list models via docker exec
-        result = subprocess.run(
-            [
-                *COMPOSE_CMD,
-                "-f",
-                str(ollama_compose),
-                "exec",
-                "ollama",
-                "ollama",
-                "list",
-            ],
-            capture_output=True,
-            text=True,
-        )
-
-        if result.returncode == 0:
-            models = result.stdout.strip().split("\n")
-            if len(models) > 1:  # Header + models
-                for model in models[1:]:
-                    console.print(f"  • {model}")
-            else:
-                console.print("  [dim]No models pulled[/dim]")
+    # Check if filtering by runtime
+    filter_runtime = getattr(args, "runtime", None)
+    
+    # Show services if no filter or not filtering
+    if filter_runtime is None:
+        console.print("[bold]Available Services:[/bold]")
+        services = get_initialized_services(mlops_path)
+        if not services:
+            console.print("  [dim]No services found in docker/ directory[/dim]")
         else:
-            console.print(
-                "  [yellow]Ollama not running (start with `kanoa serve ollama`)[/yellow]"
-            )
-    except (KeyError, FileNotFoundError, subprocess.CalledProcessError):
-        console.print(
-            "  [dim]Ollama service not configured or Docker unavailable[/dim]"
-        )
+            for name, path in services.items():
+                console.print(f"  • {name:<15} [dim]({path.relative_to(mlops_path)})[/dim]")
+        console.print("")
 
-    console.print("")
-    console.print("[bold]vLLM Models:[/bold]")
-    console.print(
-        "  [dim](Check docker/vllm/docker-compose.*.yml for configured models)[/dim]"
-    )
+    # Show Ollama models if no filter or filtering for ollama
+    if filter_runtime is None or filter_runtime == "ollama":
+        console.print("[bold]Ollama Models:[/bold]")
+        
+        # First check local cache
+        ollama_models = _list_ollama_models()
+        if ollama_models:
+            for model in ollama_models:
+                if model["size_gb"] > 0:
+                    console.print(f"  • {model['name']:40} ({model['size_gb']:5.1f} GB)")
+                else:
+                    console.print(f"  • {model['name']}")
+        else:
+            console.print("  [dim]No models found in Ollama cache (~/.ollama/models)[/dim]")
+        
+        if filter_runtime is None:
+            console.print("")
+
+    # Show vLLM models if no filter or filtering for vllm
+    if filter_runtime is None or filter_runtime == "vllm":
+        console.print("[bold]vLLM Models:[/bold]")
+        
+        # Get all cached models and categorize by family
+        cached_models = _list_cached_models()
+        
+        if not cached_models:
+            console.print("  [dim]No models found in HuggingFace cache[/dim]")
+        else:
+            # Define family patterns for categorization
+            family_patterns = {
+                "gemma3": ["google/gemma-3", "google/gemma3"],
+                "molmo": ["allenai/molmo", "allenai/Molmo"],
+                "olmo3": ["allenai/olmo-3", "allenai/Olmo-3"],
+            }
+            
+            # Categorize models by family
+            family_models = {family: [] for family in family_patterns}
+            other_models = []
+            
+            for model in cached_models:
+                if not model["complete"]:
+                    continue
+                
+                model_name = model["name"].lower()
+                categorized = False
+                
+                for family, patterns in family_patterns.items():
+                    if any(pattern.lower() in model_name for pattern in patterns):
+                        family_models[family].append(model)
+                        categorized = True
+                        break
+                
+                if not categorized:
+                    other_models.append(model)
+            
+            # Display models by family
+            first_family = True
+            for family in ["gemma3", "molmo", "olmo3"]:
+                models = family_models[family]
+                if models:
+                    if first_family:
+                        console.print(f"  [cyan]{family}:[/cyan]")
+                        first_family = False
+                    else:
+                        console.print(f"\n  [cyan]{family}:[/cyan]")
+                    for model in models:
+                        console.print(f"    • {model['name']:40} ({model['size_gb']:5.1f} GB)")
+            
+            if other_models:
+                console.print(f"\n  [cyan]other:[/cyan]")
+                for model in other_models:
+                    console.print(f"    • {model['name']:40} ({model['size_gb']:5.1f} GB)")
+            
+            if not any(family_models.values()) and not other_models:
+                console.print("  [dim]No complete models found in cache[/dim]")
 
 
 # =============================================================================
@@ -684,10 +1312,27 @@ def register(parser) -> None:
         "serve", help="Start local services (Ollama, Monitoring, vLLM)"
     )
     serve_parser.add_argument(
-        "service",
+        "runtime",
         default=None,
         nargs="?",
-        help="Service to start (ollama, monitoring, vllm-*, or all)",
+        help="Runtime or service to start (vllm, ollama, monitoring, all)",
+    )
+    serve_parser.add_argument(
+        "model_family",
+        default=None,
+        nargs="?",
+        help="Model family for vLLM (gemma3, molmo, olmo3) or Ollama model",
+    )
+    serve_parser.add_argument(
+        "--model",
+        "-m",
+        default=None,
+        help="Specific model to serve (e.g., google/gemma-3-12b-it)",
+    )
+    serve_parser.add_argument(
+        "--offline",
+        action="store_true",
+        help="Run in offline mode (only use cached model files, no internet access)",
     )
     serve_parser.set_defaults(func=handle_serve)
 
@@ -719,4 +1364,11 @@ def register(parser) -> None:
 
     # list command
     list_parser = parser.add_parser("list", help="List available services and models")
+    list_parser.add_argument(
+        "runtime",
+        default=None,
+        nargs="?",
+        choices=["ollama", "vllm"],
+        help="Filter by runtime (ollama or vllm)",
+    )
     list_parser.set_defaults(func=handle_list)
