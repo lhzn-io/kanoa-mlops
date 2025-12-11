@@ -26,11 +26,28 @@ class TestMetrics:
 TEST_METRICS = []
 
 
-def query_olmo3(prompt, max_tokens=4096, temperature=0.7):
+SYSTEM_PROMPT_PYTHON = """You are a concise and expert Python programmer.
+Your primary goal is to write clean, correct, and well-documented code based on the user's request, and then provide a brief, professional explanation.
+NEVER output any of your internal reasoning, step-by-step thinking, or self-correction loops (e.g., 'Let's start by recalling...', 'Wait, but...', 'So the code would start with:').
+Respond only with the final code block followed by a brief, formatted explanation."""
+
+SYSTEM_PROMPT_SQL = """You are a concise and expert SQL developer.
+Your primary goal is to write efficient, correct, and well-commented SQL queries based on the user's request, and then provide a brief, professional explanation.
+NEVER output any of your internal reasoning, step-by-step thinking, or self-correction loops.
+Respond only with the final SQL query block followed by a brief, formatted explanation."""
+
+SYSTEM_PROMPT_GENERAL = """You are a concise and expert AI assistant.
+Your primary goal is to provide clear, direct, and correct answers to the user's request.
+NEVER output any of your internal reasoning, step-by-step thinking, or self-correction loops (e.g., 'Let's start by recalling...', 'Wait, but...').
+Respond directly with the final answer."""
+
+
+def query_olmo3(prompt, system_prompt=None, max_tokens=4096, temperature=0.7):
     """Query the Olmo3 model via vLLM OpenAI-compatible API.
 
     Args:
         prompt: Text prompt
+        system_prompt: Optional system prompt to guide the model
         max_tokens: Maximum tokens to generate
         temperature: Sampling temperature
 
@@ -39,9 +56,14 @@ def query_olmo3(prompt, max_tokens=4096, temperature=0.7):
     """
     headers = {"Content-Type": "application/json"}
 
+    messages = []
+    if system_prompt:
+        messages.append({"role": "system", "content": system_prompt})
+    messages.append({"role": "user", "content": prompt})
+
     data = {
         "model": MODEL_NAME,
-        "messages": [{"role": "user", "content": prompt}],
+        "messages": messages,
         "max_tokens": max_tokens,
         "temperature": temperature,
     }
@@ -69,8 +91,10 @@ Include:
 - Edge case handling
 - Example usage"""
 
-    response, usage, duration = query_olmo3(prompt, max_tokens=4096, temperature=0.2)
-    print(f"[OK] Response:\\n{response}")
+    response, usage, duration = query_olmo3(
+        prompt, system_prompt=SYSTEM_PROMPT_PYTHON, max_tokens=4096, temperature=0.2
+    )
+    print(f"[OK] Response:\n{response}")
 
     # Track metrics
     tokens_generated = usage.get("completion_tokens", 0)
@@ -105,8 +129,10 @@ def test_code_generation_sql():
 
 Include comments explaining each part."""
 
-    response, usage, duration = query_olmo3(prompt, max_tokens=4096, temperature=0.2)
-    print(f"[OK] Response:\\n{response}")
+    response, usage, duration = query_olmo3(
+        prompt, system_prompt=SYSTEM_PROMPT_SQL, max_tokens=4096, temperature=0.2
+    )
+    print(f"[OK] Response:\n{response}")
 
     # Track metrics
     tokens_generated = usage.get("completion_tokens", 0)
@@ -148,8 +174,10 @@ Calculate:
 
 Show your work and reasoning for each step."""
 
-    response, usage, duration = query_olmo3(prompt, max_tokens=4096, temperature=0.1)
-    print(f"[OK] Response:\\n{response}")
+    response, usage, duration = query_olmo3(
+        prompt, system_prompt=SYSTEM_PROMPT_GENERAL, max_tokens=4096, temperature=0.1
+    )
+    print(f"[OK] Response:\n{response}")
 
     # Track metrics
     tokens_generated = usage.get("completion_tokens", 0)
@@ -195,8 +223,10 @@ Return a JSON object with this exact structure:
 
 Only return the JSON, no additional text."""
 
-    response, usage, duration = query_olmo3(prompt, max_tokens=4096, temperature=0.1)
-    print(f"[OK] Response:\\n{response}")
+    response, usage, duration = query_olmo3(
+        prompt, system_prompt=SYSTEM_PROMPT_GENERAL, max_tokens=4096, temperature=0.1
+    )
+    print(f"[OK] Response:\n{response}")
 
     # Track metrics
     tokens_generated = usage.get("completion_tokens", 0)
@@ -243,8 +273,10 @@ Provide:
 4. Pseudocode
 5. Python implementation"""
 
-    response, usage, duration = query_olmo3(prompt, max_tokens=4096, temperature=0.2)
-    print(f"[OK] Response:\\n{response}")
+    response, usage, duration = query_olmo3(
+        prompt, system_prompt=SYSTEM_PROMPT_PYTHON, max_tokens=4096, temperature=0.2
+    )
+    print(f"[OK] Response:\n{response}")
 
     # Track metrics
     tokens_generated = usage.get("completion_tokens", 0)
