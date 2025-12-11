@@ -422,32 +422,32 @@ def _list_ollama_models() -> list[dict]:
         return []
 
     models = []
-    
+
     # Iterate through registry.ollama.ai/library/ and other registries
     for registry_dir in manifests_dir.rglob("*"):
         if registry_dir.is_dir():
             continue
-        
+
         # Get relative path from manifests dir to construct model name
         rel_path = registry_dir.relative_to(manifests_dir)
         parts = rel_path.parts
-        
+
         # Skip if not enough path parts
         if len(parts) < 3:
             continue
-        
+
         # Construct model name (registry/namespace/model:tag)
         # For ollama.ai models: library/modelname/tag -> modelname:tag
         if "library" in parts:
             idx = parts.index("library")
             if idx + 2 < len(parts):
-                model_name = f"{parts[idx+1]}:{parts[idx+2]}"
+                model_name = f"{parts[idx + 1]}:{parts[idx + 2]}"
             else:
                 continue
         else:
             # For other registries, use full path
             model_name = "/".join(parts)
-        
+
         # Try to get size from manifest
         size_gb = 0
         try:
@@ -455,16 +455,20 @@ def _list_ollama_models() -> list[dict]:
                 manifest = json.load(f)
                 # Ollama manifests have layers with sizes
                 if "layers" in manifest:
-                    size_bytes = sum(layer.get("size", 0) for layer in manifest["layers"])
+                    size_bytes = sum(
+                        layer.get("size", 0) for layer in manifest["layers"]
+                    )
                     size_gb = size_bytes / (1024**3)
         except (json.JSONDecodeError, KeyError, FileNotFoundError):
             pass
-        
-        models.append({
-            "name": model_name,
-            "size_gb": size_gb,
-        })
-    
+
+        models.append(
+            {
+                "name": model_name,
+                "size_gb": size_gb,
+            }
+        )
+
     return sorted(models, key=lambda x: x["name"])
 
 
@@ -590,7 +594,9 @@ def _select_vllm_family_interactive(service_map: dict) -> str | None:
     from rich.prompt import Prompt
     from rich.table import Table
 
-    vllm_families = [k.replace("vllm-", "") for k in service_map.keys() if k.startswith("vllm-")]
+    vllm_families = [
+        k.replace("vllm-", "") for k in service_map if k.startswith("vllm-")
+    ]
 
     if not vllm_families:
         console.print("[red]No vLLM families configured.[/red]")
@@ -649,7 +655,8 @@ def _select_model_interactive(family: str | None = None) -> str | None:
         patterns = family_patterns.get(family.lower(), [])
         if patterns:
             models = [
-                m for m in models 
+                m
+                for m in models
                 if any(p.lower() in m["name"].lower() for p in patterns)
             ]
 
@@ -732,26 +739,26 @@ def handle_serve(args) -> None:
     runtime = getattr(args, "runtime", None)
     model_family = getattr(args, "model_family", None)
     service_map = get_initialized_services(mlops_path)
-    
+
     # If no runtime specified and TTY available, start interactive flow
     if runtime is None and _is_tty():
         console.print("")
         console.print("[bold cyan]kanoa serve[/bold cyan] - MLOps Service Manager\n")
-        
+
         runtime = _select_service_interactive(service_map)
         if runtime is None:
             console.print("[yellow]Cancelled.[/yellow]")
             sys.exit(0)
-        
+
         console.print("")
-    
+
     # If no runtime, show help and exit
     if runtime is None:
         # Categorize services
         infrastructure = []
         vllm_families = []
         ml_runtimes = []
-        
+
         for name in service_map:
             if name == "monitoring":
                 infrastructure.append(name)
@@ -762,46 +769,56 @@ def handle_serve(args) -> None:
             else:
                 # Fallback for unknown services
                 ml_runtimes.append(name)
-        
+
         # Display categorized help
         console.print("[bold cyan]kanoa serve[/bold cyan] - MLOps Service Manager\n")
-        
+
         if infrastructure:
             console.print("[bold]Infrastructure:[/bold]")
             console.print("  • monitoring      - Prometheus + Grafana")
             console.print("")
-        
+
         if ml_runtimes or vllm_families:
             console.print("[bold]ML Runtimes:[/bold]")
             for name in ml_runtimes:
-                desc = "Ollama server (manage models: ollama pull/list)" if name == "ollama" else "ML runtime"
+                desc = (
+                    "Ollama server (manage models: ollama pull/list)"
+                    if name == "ollama"
+                    else "ML runtime"
+                )
                 console.print(f"  • {name:15} - {desc}")
-            console.print(f"  • vllm          - vLLM inference server")
+            console.print("  • vllm          - vLLM inference server")
             console.print("")
-        
+
         if vllm_families:
             console.print("[bold]vLLM Model Families:[/bold]")
             family_desc = {
                 "olmo3": "Allen AI OLMo 3 (text)",
                 "gemma3": "Google Gemma 3 (multimodal)",
-                "molmo": "Allen AI Molmo (multimodal vision)"
+                "molmo": "Allen AI Molmo (multimodal vision)",
             }
             for name in sorted(vllm_families):
                 desc = family_desc.get(name, "Model family")
                 console.print(f"  • {name:15} - {desc}")
             console.print("")
-        
+
         console.print("[bold]Usage:[/bold]")
-        console.print("  kanoa serve <runtime>                          # Start runtime")
-        console.print("  kanoa serve vllm <family> --model <id>         # Specific model")
-        console.print("  kanoa serve all                                # Start all services")
+        console.print(
+            "  kanoa serve <runtime>                          # Start runtime"
+        )
+        console.print(
+            "  kanoa serve vllm <family> --model <id>         # Specific model"
+        )
+        console.print(
+            "  kanoa serve all                                # Start all services"
+        )
         console.print("")
         console.print("[bold]Examples:[/bold]")
         console.print("  kanoa serve monitoring")
         console.print("  kanoa serve ollama")
         console.print("  kanoa serve vllm gemma3 --model google/gemma-3-12b-it")
         return
-    
+
     # Construct service name from runtime and model_family
     service = None
     if runtime in ["monitoring", "all"]:
@@ -822,9 +839,11 @@ def handle_serve(args) -> None:
                 console.print("")
             else:
                 console.print("[red]Error: model family required for vLLM[/red]")
-                console.print("\nUsage: kanoa serve vllm <model-family> [--model <specific-model>]")
+                console.print(
+                    "\nUsage: kanoa serve vllm <model-family> [--model <specific-model>]"
+                )
                 console.print("\nAvailable families:")
-                for k in service_map.keys():
+                for k in service_map:
                     if k.startswith("vllm-"):
                         console.print(f"  • {k.replace('vllm-', '')}")
                 sys.exit(1)
@@ -849,10 +868,14 @@ def handle_serve(args) -> None:
         # No model specified for vLLM service
         if _is_tty():
             # Interactive mode - show selector with family filter
-            console.print("[cyan]No model specified, showing available models...[/cyan]")
+            console.print(
+                "[cyan]No model specified, showing available models...[/cyan]"
+            )
             console.print("")
             # Extract family from service name (e.g., vllm-gemma3 -> gemma3)
-            family = service.replace("vllm-", "") if service.startswith("vllm-") else None
+            family = (
+                service.replace("vllm-", "") if service.startswith("vllm-") else None
+            )
             model_name = _select_model_interactive(family=family)
             if not model_name:
                 console.print("[yellow]No model selected, exiting.[/yellow]")
@@ -871,16 +894,19 @@ def handle_serve(args) -> None:
         compose_env["SERVED_MODEL_NAME"] = model_name
 
         # Check if model is cached for vLLM services
-        if service and service.startswith("vllm-"):
-            if not _download_model_if_needed(model_name):
-                sys.exit(1)
+        if (
+            service
+            and service.startswith("vllm-")
+            and not _download_model_if_needed(model_name)
+        ):
+            sys.exit(1)
 
     if service is None:
         # Categorize services
         infrastructure = []
         vllm_families = []
         ml_runtimes = []
-        
+
         for name in service_map:
             if name == "monitoring":
                 infrastructure.append(name)
@@ -891,48 +917,62 @@ def handle_serve(args) -> None:
             else:
                 # Fallback for unknown services
                 ml_runtimes.append(name)
-        
+
         # Display categorized help
         console.print("[bold cyan]kanoa serve[/bold cyan] - MLOps Service Manager\n")
-        
+
         if infrastructure:
             console.print("[bold]Infrastructure:[/bold]")
             console.print("  • monitoring      - Prometheus + Grafana")
             console.print("")
-        
+
         if ml_runtimes or vllm_families:
             console.print("[bold]ML Runtimes:[/bold]")
             for name in ml_runtimes:
-                desc = "Ollama server (manage models: ollama pull/list)" if name == "ollama" else "ML runtime"
+                desc = (
+                    "Ollama server (manage models: ollama pull/list)"
+                    if name == "ollama"
+                    else "ML runtime"
+                )
                 console.print(f"  • {name:15} - {desc}")
-            console.print(f"  • vllm          - vLLM inference server")
+            console.print("  • vllm          - vLLM inference server")
             console.print("")
-        
+
         if vllm_families:
             console.print("[bold]vLLM Model Families:[/bold]")
             family_desc = {
                 "olmo3": "Allen AI OLMo 3 (text)",
                 "gemma3": "Google Gemma 3 (multimodal)",
-                "molmo": "Allen AI Molmo (multimodal vision)"
+                "molmo": "Allen AI Molmo (multimodal vision)",
             }
             for name in sorted(vllm_families):
                 desc = family_desc.get(name, "Model family")
                 console.print(f"  • {name:15} - {desc}")
             console.print("")
-        
+
         console.print("[bold]Usage:[/bold]")
-        console.print("  kanoa serve <runtime>                          # Start runtime")
-        console.print("  kanoa serve vllm <family> --model <id>         # Specific model")
+        console.print(
+            "  kanoa serve <runtime>                          # Start runtime"
+        )
+        console.print(
+            "  kanoa serve vllm <family> --model <id>         # Specific model"
+        )
         if _is_tty():
-            console.print("  kanoa serve vllm <family>                      # Interactive selection")
-        console.print("  kanoa serve all                                # Start all services")
+            console.print(
+                "  kanoa serve vllm <family>                      # Interactive selection"
+            )
+        console.print(
+            "  kanoa serve all                                # Start all services"
+        )
         console.print("")
         console.print("[bold]Examples:[/bold]")
         console.print("  kanoa serve monitoring")
         console.print("  kanoa serve ollama")
         console.print("  kanoa serve vllm gemma3 --model google/gemma-3-12b-it")
         if _is_tty():
-            console.print("  kanoa serve vllm molmo  # Shows interactive model selector")
+            console.print(
+                "  kanoa serve vllm molmo  # Shows interactive model selector"
+            )
         return
 
     if service == "all":
@@ -1130,7 +1170,9 @@ def handle_stop(args) -> None:
             console.print(f"[red]Error: Service '{service}' not found.[/red]")
             # Try to be helpful if they typed 'vllm gemma3' but it didn't match
             if service.startswith("vllm-"):
-                console.print(f"Did you mean: kanoa stop vllm {service.replace('vllm-', '')}?")
+                console.print(
+                    f"Did you mean: kanoa stop vllm {service.replace('vllm-', '')}?"
+                )
 
     console.print("[green]✔ Services stopped.[/green]")
 
@@ -1275,7 +1317,7 @@ def handle_list(args) -> None:
 
     # Check if filtering by runtime
     filter_runtime = getattr(args, "runtime", None)
-    
+
     # Show services if no filter or not filtering
     if filter_runtime is None:
         console.print("[bold]Available Services:[/bold]")
@@ -1284,34 +1326,40 @@ def handle_list(args) -> None:
             console.print("  [dim]No services found in docker/ directory[/dim]")
         else:
             for name, path in services.items():
-                console.print(f"  • {name:<15} [dim]({path.relative_to(mlops_path)})[/dim]")
+                console.print(
+                    f"  • {name:<15} [dim]({path.relative_to(mlops_path)})[/dim]"
+                )
         console.print("")
 
     # Show Ollama models if no filter or filtering for ollama
     if filter_runtime is None or filter_runtime == "ollama":
         console.print("[bold]Ollama Models:[/bold]")
-        
+
         # First check local cache
         ollama_models = _list_ollama_models()
         if ollama_models:
             for model in ollama_models:
                 if model["size_gb"] > 0:
-                    console.print(f"  • {model['name']:40} ({model['size_gb']:5.1f} GB)")
+                    console.print(
+                        f"  • {model['name']:40} ({model['size_gb']:5.1f} GB)"
+                    )
                 else:
                     console.print(f"  • {model['name']}")
         else:
-            console.print("  [dim]No models found in Ollama cache (~/.ollama/models)[/dim]")
-        
+            console.print(
+                "  [dim]No models found in Ollama cache (~/.ollama/models)[/dim]"
+            )
+
         if filter_runtime is None:
             console.print("")
 
     # Show vLLM models if no filter or filtering for vllm
     if filter_runtime is None or filter_runtime == "vllm":
         console.print("[bold]vLLM Models:[/bold]")
-        
+
         # Get all cached models and categorize by family
         cached_models = _list_cached_models()
-        
+
         if not cached_models:
             console.print("  [dim]No models found in HuggingFace cache[/dim]")
         else:
@@ -1321,27 +1369,27 @@ def handle_list(args) -> None:
                 "molmo": ["allenai/molmo", "allenai/Molmo"],
                 "olmo3": ["allenai/olmo-3", "allenai/Olmo-3"],
             }
-            
+
             # Categorize models by family
             family_models = {family: [] for family in family_patterns}
             other_models = []
-            
+
             for model in cached_models:
                 if not model["complete"]:
                     continue
-                
+
                 model_name = model["name"].lower()
                 categorized = False
-                
+
                 for family, patterns in family_patterns.items():
                     if any(pattern.lower() in model_name for pattern in patterns):
                         family_models[family].append(model)
                         categorized = True
                         break
-                
+
                 if not categorized:
                     other_models.append(model)
-            
+
             # Display models by family
             first_family = True
             for family in ["gemma3", "molmo", "olmo3"]:
@@ -1353,13 +1401,17 @@ def handle_list(args) -> None:
                     else:
                         console.print(f"\n  [cyan]{family}:[/cyan]")
                     for model in models:
-                        console.print(f"    • {model['name']:40} ({model['size_gb']:5.1f} GB)")
-            
+                        console.print(
+                            f"    • {model['name']:40} ({model['size_gb']:5.1f} GB)"
+                        )
+
             if other_models:
-                console.print(f"\n  [cyan]other:[/cyan]")
+                console.print("\n  [cyan]other:[/cyan]")
                 for model in other_models:
-                    console.print(f"    • {model['name']:40} ({model['size_gb']:5.1f} GB)")
-            
+                    console.print(
+                        f"    • {model['name']:40} ({model['size_gb']:5.1f} GB)"
+                    )
+
             if not any(family_models.values()) and not other_models:
                 console.print("  [dim]No complete models found in cache[/dim]")
 
