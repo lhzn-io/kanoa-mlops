@@ -3,10 +3,7 @@
 from pathlib import Path
 from typing import Any
 
-try:
-    import toml
-except ImportError:
-    toml = None
+import toml
 
 CONFIG_DIR = Path.home() / ".config" / "kanoa"
 CONFIG_FILE = CONFIG_DIR / "mlops.toml"
@@ -18,15 +15,13 @@ DEFAULT_CONFIG = {
 
 def load_config() -> dict[str, Any]:
     """Load user configuration from ~/.config/kanoa/mlops.toml."""
-    if CONFIG_FILE.exists() and toml:
-        return toml.load(CONFIG_FILE)  # type: ignore[no-any-return]
+    if CONFIG_FILE.exists():
+        return toml.load(CONFIG_FILE)
     return DEFAULT_CONFIG.copy()
 
 
 def save_config(config: dict[str, Any]) -> None:
     """Save user configuration to ~/.config/kanoa/mlops.toml."""
-    if not toml:
-        raise ImportError("toml package required for config management")
     CONFIG_DIR.mkdir(parents=True, exist_ok=True)
     with open(CONFIG_FILE, "w") as f:
         toml.dump(config, f)
