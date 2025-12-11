@@ -12,6 +12,7 @@ def run_single_benchmark():
     """Run a single benchmark and return results."""
     result = subprocess.run(
         ["python3", "test_vllm_molmo_api.py"],
+        check=False,
         capture_output=False,
         text=True,
         cwd=Path(__file__).parent,

@@ -7,6 +7,8 @@ Supports both:
   2. PyPI install mode (templates copied via `kanoa init mlops`)
 """
 
+import json
+import os
 import re
 import shutil
 import subprocess
@@ -102,6 +104,8 @@ def _image_exists(image: str) -> bool:
 # Rich for CLI output (graceful fallback if not available)
 try:
     from rich.console import Console
+    from rich.prompt import Prompt
+    from rich.table import Table
 
     console = Console()
 except ImportError:
@@ -115,6 +119,14 @@ except ImportError:
             print(text, **kwargs)
 
     console = _FallbackConsole()  # type: ignore[assignment]
+
+    # Define dummy Prompt/Table to avoid NameError if referenced
+    Prompt = None  # type: ignore[assignment, misc]
+    Table = None  # type: ignore[assignment, misc]
+
+HTTP_OK = 200
+MIN_OLLAMA_PATH_PARTS = 3
+MIN_VLLM_PARTS = 2
 
 
 def resolve_mlops_path() -> Path | None:
@@ -181,8 +193,6 @@ def run_docker_compose(
         # Merge environment variables if provided
         run_env = None
         if env:
-            import os
-
             run_env = os.environ.copy()
             run_env.update(env)
         subprocess.run(cmd, check=True, env=run_env)
@@ -347,9 +357,6 @@ def _check_model_cached(model_name: str) -> tuple[bool, str]:
             - (False, "incomplete") if model exists but has incomplete files
             - (False, "missing") if model directory doesn't exist
     """
-    import os
-    from pathlib import Path
-
     # Check HF_HOME or default cache location
     hf_home = os.environ.get("HF_HOME", os.path.expanduser("~/.cache/huggingface"))
     model_cache_name = model_name.replace("/", "--")
@@ -375,9 +382,6 @@ def _list_cached_models() -> list[dict]:
     Returns:
         List of dicts with model info: {name, path, status, size_gb}
     """
-    import os
-    from pathlib import Path
-
     hf_home = os.environ.get("HF_HOME", os.path.expanduser("~/.cache/huggingface"))
     hub_dir = Path(hf_home) / "hub"
 
@@ -416,10 +420,6 @@ def _list_ollama_models() -> list[dict]:
     Returns:
         List of dicts with model info: {name, size_gb}
     """
-    import json
-    import os
-    from pathlib import Path
-
     ollama_home = os.environ.get("OLLAMA_MODELS", os.path.expanduser("~/.ollama"))
     manifests_dir = Path(ollama_home) / "models" / "manifests"
 
@@ -438,7 +438,7 @@ def _list_ollama_models() -> list[dict]:
         parts = rel_path.parts
 
         # Skip if not enough path parts
-        if len(parts) < 3:
+        if len(parts) < MIN_OLLAMA_PATH_PARTS:
             continue
 
         # Construct model name (registry/namespace/model:tag)
@@ -528,13 +528,10 @@ def _select_service_interactive(service_map: dict) -> str | None:
     Returns:
         Selected service name or None if cancelled
     """
-    from rich.prompt import Prompt
-    from rich.table import Table
-
     # Categorize services
-    infrastructure = []
-    ml_runtimes = []
-    vllm_families = []
+    infrastructure: list[str] = []
+    ml_runtimes: list[str] = []
+    vllm_families: list[str] = []
 
     for name in service_map:
         if name == "monitoring":
@@ -570,10 +567,12 @@ def _select_service_interactive(service_map: dict) -> str | None:
         idx += 1
 
     console.print(table)
-    choice = Prompt.ask(
-        "Select service",
-        choices=[str(i) for i, _ in choices] + ["q"],
-        default="q",
+    choice = str(
+        Prompt.ask(
+            "Select service",
+            choices=[str(i) for i, _ in choices] + ["q"],
+            default="q",
+        )
     )
 
     if choice == "q":
@@ -596,10 +595,7 @@ def _select_vllm_family_interactive(service_map: dict) -> str | None:
     Returns:
         Selected family name (e.g., 'gemma3') or None if cancelled
     """
-    from rich.prompt import Prompt
-    from rich.table import Table
-
-    vllm_families = [
+    vllm_families: list[str] = [
         k.replace("vllm-", "") for k in service_map if k.startswith("vllm-")
     ]
 
@@ -623,10 +619,12 @@ def _select_vllm_family_interactive(service_map: dict) -> str | None:
         table.add_row(str(idx), family, desc)
 
     console.print(table)
-    choice = Prompt.ask(
-        "Select model family",
-        choices=[str(i) for i in range(1, len(vllm_families) + 1)] + ["q"],
-        default="q",
+    choice = str(
+        Prompt.ask(
+            "Select model family",
+            choices=[str(i) for i in range(1, len(vllm_families) + 1)] + ["q"],
+            default="q",
+        )
     )
 
     if choice == "q":
@@ -645,9 +643,6 @@ def _select_model_interactive(family: str | None = None) -> str | None:
     Returns:
         Selected model name or None if cancelled
     """
-    from rich.prompt import Prompt
-    from rich.table import Table
-
     models = _list_cached_models()
 
     # Filter by family if specified
@@ -693,7 +688,7 @@ def _select_model_interactive(family: str | None = None) -> str | None:
     table.add_column("Size", justify="right", style="blue")
     table.add_column("Status", style="yellow")
 
-    complete_models = []
+    complete_models: list[tuple[int, str]] = []
     for idx, model in enumerate(models, 1):
         status_icon = "✔" if model["complete"] else "✘"
         status_text = f"{status_icon} {model['status']}"
@@ -714,10 +709,12 @@ def _select_model_interactive(family: str | None = None) -> str | None:
     console.print("")
 
     # Prompt for selection
-    choice = Prompt.ask(
-        "Select model number (or 'q' to quit)",
-        choices=[str(i) for i, _ in complete_models] + ["q"],
-        default="q",
+    choice = str(
+        Prompt.ask(
+            "Select model number (or 'q' to quit)",
+            choices=[str(i) for i, _ in complete_models] + ["q"],
+            default="q",
+        )
     )
 
     if choice == "q":
@@ -1063,6 +1060,7 @@ def _get_running_services(service_map: dict) -> list[str]:
     try:
         result = subprocess.run(
             ["docker", "ps", "--format", "{{.Names}}"],
+            check=False,
             capture_output=True,
             text=True,
         )
@@ -1082,7 +1080,7 @@ def _get_running_services(service_map: dict) -> list[str]:
     except FileNotFoundError:
         pass
 
-    return sorted(list(running))
+    return sorted(running)
 
 
 def handle_stop(args) -> None:
@@ -1105,7 +1103,7 @@ def handle_stop(args) -> None:
     if service_parts:
         if len(service_parts) == 1:
             service = service_parts[0]
-        elif len(service_parts) >= 2 and service_parts[0] == "vllm":
+        elif len(service_parts) >= MIN_VLLM_PARTS and service_parts[0] == "vllm":
             # Handle 'vllm gemma3' -> 'vllm-gemma3'
             service = f"vllm-{service_parts[1]}"
         else:
@@ -1123,9 +1121,6 @@ def handle_stop(args) -> None:
             return
 
         # Show interactive menu for running services
-        from rich.prompt import Prompt
-        from rich.table import Table
-
         table = Table(title="Running Services")
         table.add_column("#", style="cyan", width=4)
         table.add_column("Service", style="green")
@@ -1168,6 +1163,9 @@ def handle_stop(args) -> None:
                 console.print(f"[blue]Stopping {name}...[/blue]")
                 run_docker_compose(compose_file, "down")
     else:
+        if service is None:
+            return
+
         compose_file_opt = service_map.get(service)
         if compose_file_opt is not None and compose_file_opt.exists():
             console.print(f"[blue]Stopping {service}...[/blue]")
@@ -1378,7 +1376,9 @@ def handle_list(args) -> None:
             }
 
             # Categorize models by family
-            family_models = {family: [] for family in family_patterns}
+            family_models: dict[str, list[dict]] = {
+                family: [] for family in family_patterns
+            }
             other_models = []
 
             for model in cached_models:

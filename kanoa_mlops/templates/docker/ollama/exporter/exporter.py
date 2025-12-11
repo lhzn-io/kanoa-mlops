@@ -9,6 +9,9 @@ OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://ollama:11434")
 SCRAPE_INTERVAL = int(os.getenv("SCRAPE_INTERVAL", "15"))
 PORT = int(os.getenv("PORT", "8000"))
 
+HTTP_OK = 200
+HTTP_NOT_FOUND = 404
+
 # Metrics
 OLLAMA_UP = Gauge("ollama_up", "Ollama service status (1=up, 0=down)")
 OLLAMA_MODEL_COUNT = Gauge("ollama_models_total", "Total number of available models")
@@ -23,7 +26,7 @@ def scrape_metrics():
     try:
         # Check Health / Version
         resp = requests.get(f"{OLLAMA_HOST}/api/version", timeout=5)
-        if resp.status_code == 200:
+        if resp.status_code == HTTP_OK:
             OLLAMA_UP.set(1)
             data = resp.json()
             OLLAMA_INFO.info({"version": data.get("version", "unknown")})
@@ -36,7 +39,7 @@ def scrape_metrics():
     try:
         # Check Available Models
         resp = requests.get(f"{OLLAMA_HOST}/api/tags", timeout=5)
-        if resp.status_code == 200:
+        if resp.status_code == HTTP_OK:
             models = resp.json().get("models", [])
             OLLAMA_MODEL_COUNT.set(len(models))
     except Exception:
@@ -45,10 +48,10 @@ def scrape_metrics():
     try:
         # Check Running Models (Process Status)
         resp = requests.get(f"{OLLAMA_HOST}/api/ps", timeout=5)
-        if resp.status_code == 200:
+        if resp.status_code == HTTP_OK:
             models = resp.json().get("models", [])
             OLLAMA_RUNNING_MODELS.set(len(models))
-        elif resp.status_code == 404:
+        elif resp.status_code == HTTP_NOT_FOUND:
             # Fallback for older Ollama versions
             OLLAMA_RUNNING_MODELS.set(0)
     except Exception:

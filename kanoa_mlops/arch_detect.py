@@ -89,6 +89,7 @@ def _is_jetson_thor() -> bool:
     try:
         result = subprocess.run(
             ["nvidia-smi", "--query-gpu=name", "--format=csv,noheader"],
+            check=False,
             capture_output=True,
             text=True,
             timeout=5,

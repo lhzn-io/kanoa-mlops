@@ -12,6 +12,7 @@ def run_single_benchmark():
     """Run a single benchmark and return results."""
     result = subprocess.run(
         ["python3", "test_ollama_gemma3.py"],
+        check=False,
         capture_output=True,
         text=True,
         cwd=Path(__file__).parent,

@@ -12,6 +12,7 @@ def run_single_benchmark():
     """Run a single benchmark and return results."""
     result = subprocess.run(
         ["python3", "test_vllm_gemma3_api.py"],
+        check=False,
         capture_output=True,
         text=True,
         cwd=Path(__file__).parent,
