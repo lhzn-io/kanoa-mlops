@@ -45,6 +45,43 @@ We welcome contributions! Please follow these guidelines to ensure a smooth proc
     touch new_name.sh
     ```
 
+## Co-Development with `kanoa`
+
+Since `kanoa-mlops` is the infrastructure layer for [kanoa](https://github.com/lhzn-io/kanoa), you may need to develop both simultaneously.
+
+### Local Editable Setup
+
+To verify your infrastructure against local changes in `kanoa` (instead of the PyPI version):
+
+1. **Ensure sibling directory structure**:
+
+    ```text
+    ~/Projects/lhzn-io/
+    ├── kanoa/
+    └── kanoa-mlops/
+    ```
+
+2. **Create local requirements override**:
+
+    ```bash
+    cd kanoa-mlops
+    cp requirements-local.txt.template requirements-local.txt
+    ```
+
+    *(This file is gitignored so it won't affect other users)*
+
+3. **Install editable link**:
+
+    ```bash
+    # Activate your environment first
+    conda activate kanoa-mlops
+
+    # Install kanoa in editable mode
+    pip install -r requirements-local.txt
+    ```
+
+Now, changes you make in `../kanoa` will be immediately reflected in your `kanoa-mlops` environment.
+
 ## Style Guide
 
 This section outlines the coding, documentation, and aesthetic standards for the `kanoa-mlops` repository.
