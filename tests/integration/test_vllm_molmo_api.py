@@ -16,8 +16,9 @@ sys.path.append(str(Path(__file__).parents[2]))
 try:
     from kanoa_mlops.arch_detect import detect_architecture
 except ImportError:
+    from typing import Any
 
-    def detect_architecture():
+    def detect_architecture() -> Any:  # type: ignore[misc]
         """Fallback if import fails."""
 
         class MockConfig:

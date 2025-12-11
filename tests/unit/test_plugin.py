@@ -141,7 +141,10 @@ def test_image_exists_true(mock_run):
 
     assert _image_exists("my-image:latest") is True
     mock_run.assert_called_with(
-        ["docker", "images", "-q", "my-image:latest"], capture_output=True, text=True
+        ["docker", "images", "-q", "my-image:latest"],
+        check=False,
+        capture_output=True,
+        text=True,
     )
 
 

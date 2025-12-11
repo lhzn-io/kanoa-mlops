@@ -1,7 +1,7 @@
 # kanoa-mlops Makefile
 # Infrastructure and development commands
 
-.PHONY: help setup setup-user setup-dev lint test clean docs
+.PHONY: help setup setup-user setup-dev lint format test clean docs
 .PHONY: deploy destroy status ssh logs stop start list switch my-ip cost
 
 # =============================================================================
@@ -36,7 +36,8 @@ help:
 	@echo "  make setup-user         - Install user dependencies (pip)"
 	@echo "  make setup-dev          - Install dev environment (conda + tools)"
 	@echo "  make setup              - Alias for setup-dev"
-	@echo "  make lint               - Run linting checks"
+	@echo "  make lint               - Run linting checks (ruff, mypy, shellcheck)"
+	@echo "  make format             - Auto-format code with ruff"
 	@echo "  make test               - Run smoke tests"
 	@echo "  make test-ollama        - Run Ollama integration tests"
 	@echo "  make gpu-probe          - Probe GPU and display metadata"
@@ -76,15 +77,30 @@ setup-dev:
 setup: setup-dev
 
 lint:
-	@echo "Running ruff..."
+	@echo "Running ruff check..."
 	ruff check .
+	@echo ""
+	@echo "Running ruff format check..."
+	ruff format --check .
+	@echo ""
+	@echo "Running mypy..."
+	mypy kanoa_mlops tests
+	@echo ""
 	@echo "Running shell linting (if installed)..."
 	-shellcheck scripts/*.sh
+	@echo ""
 	@echo "Validating notebook JSON..."
 	@python3 -c "import json; json.load(open('examples/quickstart-molmo-gcp.ipynb'))" && echo "  quickstart-molmo-gcp.ipynb: OK"
 	@python3 -c "import json; json.load(open('examples/quickstart-gemma3-gcp.ipynb'))" && echo "  quickstart-gemma3-gcp.ipynb: OK"
 	@python3 -c "import json; json.load(open('examples/demo-molmo-7b-egpu.ipynb'))" && echo "  demo-molmo-7b-egpu.ipynb: OK"
 	@python3 -c "import json; json.load(open('examples/demo-gemma-3-12b-egpu.ipynb'))" && echo "  demo-gemma-3-12b-egpu.ipynb: OK"
+
+format:
+	@echo "Running ruff check with auto-fix..."
+	ruff check --fix .
+	@echo ""
+	@echo "Running ruff format..."
+	ruff format .
 
 test:
 	@echo "Running infrastructure validation..."

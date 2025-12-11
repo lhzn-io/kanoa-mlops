@@ -3,9 +3,12 @@
     "ms-azuretools.vscode-docker",
     "ms-python.python",
     "ms-python.vscode-pylance",
+    "ms-python.mypy-type-checker",
     "redhat.vscode-yaml",
     "tamasfe.even-better-toml",
     "charliermarsh.ruff",
+    "DavidAnson.vscode-markdownlint",
+    "bierner.markdown-mermaid",
     "github.copilot",
     "github.copilot-chat"
   ]

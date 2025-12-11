@@ -78,8 +78,10 @@ def _parse_images_from_compose(compose_file: Path) -> list[str]:
     except Exception:
         return images
 
-    for m in re.finditer(r"^\s*image:\s*(\S+)", text, flags=re.MULTILINE):
-        images.append(m.group(1).strip())
+    images.extend(
+        m.group(1).strip()
+        for m in re.finditer(r"^\s*image:\s*(\S+)", text, flags=re.MULTILINE)
+    )
     return images
 
 
@@ -87,7 +89,10 @@ def _image_exists(image: str) -> bool:
     """Return True if a Docker image with this name:tag exists locally."""
     try:
         result = subprocess.run(
-            ["docker", "images", "-q", image], capture_output=True, text=True
+            ["docker", "images", "-q", image],
+            check=False,
+            capture_output=True,
+            text=True,
         )
         return bool(result.stdout.strip())
     except FileNotFoundError:
@@ -1009,14 +1014,15 @@ def handle_serve(args) -> None:
 
             run_docker_compose(compose_file, "up", env=compose_env)
     else:
-        compose_file = service_map.get(service)
-        if not compose_file or not compose_file.exists():
+        compose_file_opt = service_map.get(service)
+        if compose_file_opt is None or not compose_file_opt.exists():
             console.print(f"[red]Error: Service '{service}' not found.[/red]")
             console.print("Available services:")
             for s in service_map:
                 console.print(f"  - {s}")
             sys.exit(1)
 
+        compose_file = compose_file_opt  # Now narrowed to Path
         console.print(f"[blue]Starting {service}...[/blue]")
         # Auto-build missing images for this service before starting
         images = _parse_images_from_compose(compose_file)
@@ -1162,10 +1168,10 @@ def handle_stop(args) -> None:
                 console.print(f"[blue]Stopping {name}...[/blue]")
                 run_docker_compose(compose_file, "down")
     else:
-        compose_file = service_map.get(service)
-        if compose_file is not None and compose_file.exists():
+        compose_file_opt = service_map.get(service)
+        if compose_file_opt is not None and compose_file_opt.exists():
             console.print(f"[blue]Stopping {service}...[/blue]")
-            run_docker_compose(compose_file, "down")
+            run_docker_compose(compose_file_opt, "down")
         else:
             console.print(f"[red]Error: Service '{service}' not found.[/red]")
             # Try to be helpful if they typed 'vllm gemma3' but it didn't match
@@ -1218,11 +1224,11 @@ def get_initialized_services(mlops_path: Path) -> dict[str, Path]:
             name = f.stem.replace("docker-compose.", "")  # e.g. 'molmo' or 'gemma'
             services[f"vllm-{name}"] = f
 
-    for name, path in candidates.items():
-        if path.exists():
-            services[name] = path
-
+    services.update({name: path for name, path in candidates.items() if path.exists()})
     return services
+
+
+HTTP_OK = 200
 
 
 def _check_url(url: str) -> bool:
@@ -1230,7 +1236,7 @@ def _check_url(url: str) -> bool:
     try:
         req = urllib.request.Request(url, method="GET")
         with urllib.request.urlopen(req, timeout=1) as response:
-            return response.status == 200
+            return response.status == HTTP_OK  # type: ignore[no-any-return]
     except Exception:
         return False
 
@@ -1260,6 +1266,7 @@ def handle_status(args) -> None:
     try:
         result = subprocess.run(
             ["docker", "ps", "--format", "table {{.Names}}\t{{.Status}}\t{{.Ports}}"],
+            check=False,
             capture_output=True,
             text=True,
         )

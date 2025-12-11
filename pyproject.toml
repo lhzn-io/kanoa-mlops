@@ -33,6 +33,9 @@ dev = [
     "sphinx>=7.0.0",
     "sphinx-rtd-theme>=1.3.0",
     "myst-parser>=2.0.0",
+    # Type stubs for mypy
+    "types-setuptools>=69.0.0",
+    "types-toml>=0.10.8",
 ]
 all = [
     "kanoa-mlops[gcp,dev]",
@@ -81,8 +84,31 @@ select = [
     "I",
     # flake8-bugbear
     "B",
+    # flake8-quotes
+    "Q",
+    # flake8-debugger
+    "T10",
+    # pylint (subset)
+    "PLC",
+    "PLE",
+    "PLW",
+    "PLR",
+    # pytest-style
+    "PT",
+    # flake8-type-checking
+    "TC",
+    # flake8-pie
+    "PIE",
     # flake8-simplify
     "SIM",
+    # flake8-comprehensions
+    "C4",
+    # Perflint
+    "PERF",
+    # pygrep-hooks
+    "PGH",
+    # flynt
+    "FLY",
     # Ruff-specific rules
     "RUF",
 ]
@@ -92,10 +118,18 @@ ignore = [
     "E501",
 ]
 
+# Allow autofix for all enabled rules (when `--fix` is provided)
+fixable = ["ALL"]
+unfixable = []
+
 [tool.ruff.lint.per-file-ignores]
+# Tests can use assert, magic values, unused variables, complex functions
+"tests/**" = ["PLR2004", "PT011", "PT018", "F841", "SIM117", "PLR0912", "PLR0915", "PLR1722"]
 # Examples/notebooks can be more relaxed
 # SIM112: Terraform env vars must be lowercase (TF_VAR_xxx convention)
-"examples/**" = ["E722", "T201", "F841", "SIM112"]
+"examples/**" = ["E722", "T201", "F841", "SIM112", "PLR2004", "C408"]
+# Plugin can have complex CLI functions
+"kanoa_mlops/plugin.py" = ["PLR0912", "PLR0915"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["kanoa"]
@@ -109,13 +143,68 @@ skip-magic-trailing-comma = false
 line-ending = "auto"
 
 # =============================================================================
-# Mypy - Type checking (minimal for infra repo)
+# Mypy - Type checking
 # =============================================================================
+
 [tool.mypy]
 python_version = "3.11"
+
+# Disallow dynamic typing (relaxed for infrastructure repo)
+disallow_any_unimported = false
+disallow_any_generics = false
 warn_return_any = true
+
+# Untyped definitions and calls (relaxed for CLI/infra code)
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+check_untyped_defs = false
+disallow_untyped_decorators = false
+
+# None and Optional handling
+no_implicit_optional = true
+strict_optional = true
+
+# Configuring warnings
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
 warn_unused_configs = true
+
+# Miscellaneous strictness flags (from pandas)
+strict_equality = true
+enable_error_code = "ignore-without-code"
+
+
+[[tool.mypy.overrides]]
+module = ["setuptools.*"]
 ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = [
+  "google.cloud.*",
+  "google.genai.*",
+  "huggingface_hub.*",
+  "jinja2.*",
+  "rich.*",
+  "toml.*",
+  "nvitop.*",
+  "gpustat.*",
+  "prometheus_client.*",
+]
+ignore_missing_imports = true
+
+# Relaxed rules for tests and examples
+[[tool.mypy.overrides]]
+module = ["tests.*", "examples.*"]
+disallow_any_unimported = false
+disallow_any_generics = false
+disallow_incomplete_defs = false
+
+# Ignore template files (not part of main codebase)
+[[tool.mypy.overrides]]
+module = ["kanoa_mlops.templates.*"]
+ignore_errors = true
 
 # =============================================================================
 # Pytest

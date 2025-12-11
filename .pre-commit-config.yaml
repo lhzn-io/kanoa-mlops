@@ -5,7 +5,7 @@
 repos:
   # General file hygiene
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
+    rev: v6.0.0
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
@@ -16,15 +16,17 @@ repos:
 
   # Ruff - Python linting and formatting
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.11.12
+    rev: v0.14.8
     hooks:
+      # Ruff linter (replaces flake8, isort, etc.)
       - id: ruff
         args: [--fix]
+      # Ruff formatter (replaces black)
       - id: ruff-format
 
   # Shell script linting
   - repo: https://github.com/shellcheck-py/shellcheck-py
-    rev: v0.10.0.1
+    rev: v0.11.0.1
     hooks:
       - id: shellcheck
         args: ["-x"]  # Follow source'd files
@@ -36,6 +38,24 @@ repos:
       - id: detect-secrets
         args: ['--baseline', '.secrets.baseline']
         exclude: \.secrets\.baseline$
+
+  - repo: local
+    hooks:
+      - id: stage-secrets-baseline
+        name: stage secrets baseline
+        entry: bash -c 'git add .secrets.baseline 2>/dev/null || true'
+        language: system
+        always_run: true
+        pass_filenames: false
+        stages: [pre-commit]
+
+  # Type checking
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.19.0
+    hooks:
+      - id: mypy
+        language: system
+        files: ^(kanoa_mlops|tests)/
 
   # Unit Tests
   - repo: local
