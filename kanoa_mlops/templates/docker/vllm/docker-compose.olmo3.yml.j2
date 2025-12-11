@@ -13,12 +13,10 @@ services:
       - "8000:8000" # Standard vLLM port
     volumes:
       - ${HF_HOME:-~/.cache/huggingface}:/root/.cache/huggingface:rw
-{% if arch_config.platform_name == "jetson-thor" %}
-      - ${HF_HOME:-~/.cache/huggingface}:/data/models/huggingface:rw
-{% endif %}
     environment:
       - CUDA_VISIBLE_DEVICES=0
       - HF_HOME=/root/.cache/huggingface
+      - HUGGINGFACE_HUB_CACHE=/root/.cache/huggingface/hub
       - TRANSFORMERS_CACHE=/root/.cache/huggingface
       - TRANSFORMERS_VERBOSITY=info
       - HF_HUB_VERBOSITY=info

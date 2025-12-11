@@ -25,6 +25,7 @@ kanoa-mlops Documentation
    developer_guide/contributing
    developer_guide/adding-models
    developer_guide/quickstart-pip
+   developer_guide/upgrading-from-source
 
 Indices and tables
 ==================

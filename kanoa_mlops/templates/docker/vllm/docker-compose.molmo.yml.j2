@@ -12,12 +12,10 @@ services:
       - "8000:8000"
     volumes:
       - ${HF_HOME:-~/.cache/huggingface}:/root/.cache/huggingface:rw
-{% if arch_config.platform_name == "jetson-thor" %}
-      - ${HF_HOME:-~/.cache/huggingface}:/data/models/huggingface:rw
-{% endif %}
     environment:
       - CUDA_VISIBLE_DEVICES=0
       - HF_HOME=/root/.cache/huggingface
+      - HUGGINGFACE_HUB_CACHE=/root/.cache/huggingface/hub
       - TRANSFORMERS_CACHE=/root/.cache/huggingface
       - TF_FORCE_GPU_ALLOW_GROWTH=true
       - TF_CPP_MIN_LOG_LEVEL=3

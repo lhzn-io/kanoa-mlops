@@ -1011,6 +1011,34 @@ def handle_serve(args) -> None:
         )
 
 
+def _get_running_services(service_map: dict) -> list[str]:
+    """Return a list of service names that are currently running."""
+    running = set()
+    try:
+        result = subprocess.run(
+            ["docker", "ps", "--format", "{{.Names}}"],
+            capture_output=True,
+            text=True,
+        )
+        container_names = result.stdout.strip().split("\n")
+
+        for cname in container_names:
+            if not cname.startswith("kanoa-"):
+                continue
+
+            suffix = cname[6:]  # remove 'kanoa-'
+
+            if suffix in service_map:
+                running.add(suffix)
+            elif suffix in ["prometheus", "grafana"]:
+                running.add("monitoring")
+
+    except FileNotFoundError:
+        pass
+
+    return sorted(list(running))
+
+
 def handle_stop(args) -> None:
     """Handle the 'stop' command by stopping docker-compose services."""
     mlops_path = resolve_mlops_path()
@@ -1019,21 +1047,78 @@ def handle_stop(args) -> None:
         console.print("[yellow]No mlops path configured. Nothing to stop.[/yellow]")
         return
 
-    service = getattr(args, "service", None)
     service_map = get_initialized_services(mlops_path)
 
+    # Parse arguments
+    # args.service is now a list (nargs="*") or None/empty
+    service_parts = getattr(args, "service", [])
+    if not service_parts:
+        service_parts = []
+
+    service = None
+    if service_parts:
+        if len(service_parts) == 1:
+            service = service_parts[0]
+        elif len(service_parts) >= 2 and service_parts[0] == "vllm":
+            # Handle 'vllm gemma3' -> 'vllm-gemma3'
+            service = f"vllm-{service_parts[1]}"
+        else:
+            # Fallback: join with hyphens (e.g. 'vllm-gemma3')
+            # This handles cases where user might type 'vllm-gemma3' as one arg
+            # or potentially other multi-word services in future
+            service = "-".join(service_parts)
+
+    # Interactive selection if no service specified
     if service is None:
-        console.print("[bold]Available Services to Stop:[/bold]")
-        for name in service_map:
-            console.print(f"  • {name}")
-        console.print("")
-        console.print("Run [bold]kanoa stop <service>[/bold] to stop one.")
-        console.print("Run [bold]kanoa stop all[/bold] to stop everything.")
-        return
+        running_services = _get_running_services(service_map)
+
+        if not running_services:
+            console.print("[yellow]No running kanoa services detected.[/yellow]")
+            return
+
+        # Show interactive menu for running services
+        from rich.prompt import Prompt
+        from rich.table import Table
+
+        table = Table(title="Running Services")
+        table.add_column("#", style="cyan", width=4)
+        table.add_column("Service", style="green")
+
+        choices = []
+        for idx, svc in enumerate(running_services, 1):
+            table.add_row(str(idx), svc)
+            choices.append((idx, svc))
+
+        # Add 'all' option
+        all_idx = len(choices) + 1
+        table.add_row(str(all_idx), "all", style="bold red")
+        choices.append((all_idx, "all"))
+
+        console.print(table)
+        choice = Prompt.ask(
+            "Select service to stop",
+            choices=[str(i) for i, _ in choices] + ["q"],
+            default="q",
+        )
+
+        if choice == "q":
+            return
+
+        for idx, svc in choices:
+            if idx == int(choice):
+                service = svc
+                break
 
     if service == "all":
-        for name, compose_file in service_map.items():
-            if compose_file.exists():
+        # Stop all running services
+        running_services = _get_running_services(service_map)
+        if not running_services:
+            console.print("[yellow]No running services to stop.[/yellow]")
+            return
+
+        for name in running_services:
+            compose_file = service_map.get(name)
+            if compose_file and compose_file.exists():
                 console.print(f"[blue]Stopping {name}...[/blue]")
                 run_docker_compose(compose_file, "down")
     else:
@@ -1043,6 +1128,9 @@ def handle_stop(args) -> None:
             run_docker_compose(compose_file, "down")
         else:
             console.print(f"[red]Error: Service '{service}' not found.[/red]")
+            # Try to be helpful if they typed 'vllm gemma3' but it didn't match
+            if service.startswith("vllm-"):
+                console.print(f"Did you mean: kanoa stop vllm {service.replace('vllm-', '')}?")
 
     console.print("[green]✔ Services stopped.[/green]")
 
@@ -1341,8 +1429,8 @@ def register(parser) -> None:
     stop_parser.add_argument(
         "service",
         default=None,
-        nargs="?",
-        help="Service to stop (default: list services)",
+        nargs="*",
+        help="Service to stop (default: interactive selection of running services)",
     )
     stop_parser.set_defaults(func=handle_stop)
 
