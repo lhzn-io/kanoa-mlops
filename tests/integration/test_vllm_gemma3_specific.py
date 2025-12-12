@@ -1,3 +1,17 @@
+#!/usr/bin/env python3
+"""Model-specific tests for Gemma 3 unique capabilities.
+
+Tests unique features not covered by comparison benchmarks:
+- Real-world image understanding
+- Multi-turn conversation memory
+
+For apples-to-apples comparisons, use:
+- test_vllm_text_comparison.py
+- test_vllm_vision_comparison.py
+"""
+
+import base64
+import io
 import json
 import platform
 import time
@@ -5,11 +19,10 @@ from dataclasses import asdict, dataclass
 from datetime import datetime
 
 import requests
+from PIL import Image
 
-# Configuration
-MODEL_NAME = "gemma3:4b"  # Ollama model tag
-OLLAMA_BASE_URL = "http://localhost:11434"
-API_URL = f"{OLLAMA_BASE_URL}/v1/chat/completions"
+MODEL_NAME = "gemma-3-12b"
+API_URL = "http://localhost:8000/v1/chat/completions"
 
 
 @dataclass
@@ -27,34 +40,8 @@ class TestMetrics:
 TEST_METRICS = []
 
 
-def ensure_model_pulled():
-    """Ensure the model is pulled in Ollama."""
-    print(f"\n[SETUP] Checking if model '{MODEL_NAME}' is available...")
-    try:
-        # Check if model exists
-        resp = requests.get(f"{OLLAMA_BASE_URL}/api/tags")
-        resp.raise_for_status()
-        models = [m["name"] for m in resp.json()["models"]]
-        if MODEL_NAME in models:
-            print(f"[OK] Model '{MODEL_NAME}' is already available.")
-            return
-
-        print(
-            f"[INFO] Model '{MODEL_NAME}' not found. Pulling (this may take a while)..."
-        )
-        # Pull model (streaming)
-        resp = requests.post(
-            f"{OLLAMA_BASE_URL}/api/pull", json={"name": MODEL_NAME, "stream": False}
-        )
-        resp.raise_for_status()
-        print(f"[OK] Model '{MODEL_NAME}' pulled successfully.")
-    except Exception as e:
-        print(f"[ERROR] Failed to check/pull model: {e}")
-        raise
-
-
-def query_ollama(prompt, max_tokens=200, temperature=0.7, image_url=None):
-    """Query the Ollama model via OpenAI-compatible API.
+def query_gemma(prompt, max_tokens=200, temperature=0.7, image_url=None):
+    """Query the Gemma model via vLLM OpenAI-compatible API.
 
     Args:
         prompt: Text prompt
@@ -83,6 +70,7 @@ def query_ollama(prompt, max_tokens=200, temperature=0.7, image_url=None):
         "max_tokens": max_tokens,
         "temperature": temperature,
         "stream": True,
+        "stream_options": {"include_usage": True},
     }
 
     print("   Streaming response...", end="", flush=True)
@@ -125,39 +113,43 @@ def query_ollama(prompt, max_tokens=200, temperature=0.7, image_url=None):
     )
 
 
-def test_api_health():
-    """Test that the Ollama API is healthy."""
-    print("\n[TEST] Testing API Health...")
-    try:
-        resp = requests.get(OLLAMA_BASE_URL)
-        if resp.status_code == 200:
-            print("[OK] Ollama is running.")
-        else:
-            print(f"[WARN] Ollama root endpoint returned {resp.status_code}")
+def test_vision_boardwalk():
+    """Test vision capability with a real-world photo."""
+    print("\n[TEST] Vision - Real World Photo (Boardwalk)")
+    image_url = "https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/Gfp-wisconsin-madison-the-nature-boardwalk.jpg/960px-Gfp-wisconsin-madison-the-nature-boardwalk.jpg"
 
-        # Check tags endpoint
-        resp = requests.get(f"{OLLAMA_BASE_URL}/api/tags")
-        resp.raise_for_status()
-        print("[PASS] API health test passed")
-    except Exception as e:
-        print(f"[FAIL] API health check failed: {e}")
-        raise
+    # Download image and convert to base64
+    print(f"   Downloading image...")
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+    }
+    img_resp = requests.get(image_url, headers=headers)
+    img_resp.raise_for_status()
 
+    # Convert to Base64
+    img = Image.open(io.BytesIO(img_resp.content))
+    if max(img.size) > 1024:
+        img.thumbnail((1024, 1024))
 
-def test_basic_chat():
-    """Test basic chat functionality."""
-    print("\n[TEST] Testing Basic Chat...")
-    prompt = "What is the capital of France?"
+    buf = io.BytesIO()
+    img.save(buf, format="JPEG")
+    img_str = base64.b64encode(buf.getvalue()).decode("utf-8")
+    base64_url = f"data:image/jpeg;base64,{img_str}"
 
-    response, usage, duration = query_ollama(prompt, max_tokens=50, temperature=0.1)
-    print(f"[OK] Response:\n{response}")
+    response, usage, duration = query_gemma(
+        "Describe this image in detail.",
+        max_tokens=200,
+        temperature=0.1,
+        image_url=base64_url,
+    )
+    print(f"\n[OK] Response received ({len(response)} chars)")
 
-    # Track metrics (Ollama usage format might differ slightly but OpenAI shim should normalize)
+    # Track metrics
     tokens_generated = usage.get("completion_tokens", 0)
     tokens_per_sec = tokens_generated / duration if duration > 0 else 0
     TEST_METRICS.append(
         TestMetrics(
-            test_name="Basic Chat",
+            test_name="Vision - Real World Photo",
             duration_s=duration,
             tokens_generated=tokens_generated,
             tokens_per_second=tokens_per_sec,
@@ -168,8 +160,75 @@ def test_basic_chat():
     print(
         f"[PERF] {duration:.2f}s | {tokens_generated} tokens | {tokens_per_sec:.1f} tok/s"
     )
-    assert "Paris" in response or "paris" in response, "Expected 'Paris' in response"
-    print("[PASS] Basic chat test passed")
+    assert len(response) > 50, "Expected substantial description"
+    print("[PASS] Real-world vision test passed")
+
+
+def test_multi_turn_conversation():
+    """Test multi-turn conversation memory capability."""
+    print("\n[TEST] Multi-turn Conversation Memory")
+
+    headers = {"Content-Type": "application/json"}
+    data = {
+        "model": MODEL_NAME,
+        "messages": [
+            {"role": "user", "content": "My name is Alice."},
+            {"role": "assistant", "content": "Hello Alice! Nice to meet you."},
+            {"role": "user", "content": "What's my name?"},
+        ],
+        "max_tokens": 50,
+        "temperature": 0.1,
+    }
+
+    start_time = time.time()
+    response = requests.post(API_URL, headers=headers, json=data)
+    duration = time.time() - start_time
+
+    response.raise_for_status()
+    result = response.json()["choices"][0]["message"]["content"]
+    usage = response.json().get("usage", {})
+
+    print(f"[OK] Response: {result}")
+
+    # Track metrics
+    tokens_generated = usage.get("completion_tokens", 0)
+    tokens_per_sec = tokens_generated / duration if duration > 0 else 0
+    TEST_METRICS.append(
+        TestMetrics(
+            test_name="Multi-turn Conversation",
+            duration_s=duration,
+            tokens_generated=tokens_generated,
+            tokens_per_second=tokens_per_sec,
+            prompt_tokens=usage.get("prompt_tokens", 0),
+        )
+    )
+
+    print(
+        f"[PERF] {duration:.2f}s | {tokens_generated} tokens | {tokens_per_sec:.1f} tok/s"
+    )
+    assert "Alice" in result or "alice" in result, (
+        "Expected model to remember the name from conversation history"
+    )
+    print("[PASS] Multi-turn conversation test passed")
+
+
+def test_api_health():
+    """Test that the vLLM API is healthy and responsive."""
+    print("\n[TEST] API Health")
+
+    # Check models endpoint
+    models_url = "http://localhost:8000/v1/models"
+    response = requests.get(models_url)
+    response.raise_for_status()
+    models = response.json()
+    print(f"[OK] Available models: {[m['id'] for m in models['data']]}")
+
+    # Check health endpoint
+    health_url = "http://localhost:8000/health"
+    response = requests.get(health_url)
+    response.raise_for_status()
+    print("[OK] Health check passed")
+    print("[PASS] API health test passed")
 
 
 def print_performance_report():
@@ -178,7 +237,7 @@ def print_performance_report():
         return
 
     print("\n" + "=" * 70)
-    print("PERFORMANCE REPORT")
+    print("PERFORMANCE REPORT - GEMMA 3 SPECIFIC TESTS")
     print("=" * 70)
 
     # Summary stats
@@ -193,18 +252,18 @@ def print_performance_report():
 
     # Per-test breakdown
     print("\nPer-Test Results:")
-    print(f"{'Test Name':<25} {'Duration':<12} {'Tokens':<10} {'Tok/s':<10}")
+    print(f"{'Test Name':<30} {'Duration':<12} {'Tokens':<10} {'Tok/s':<10}")
     print("-" * 70)
     for metric in TEST_METRICS:
         print(
-            f"{metric.test_name:<25} {metric.duration_s:>8.2f}s    {metric.tokens_generated:>6}     {metric.tokens_per_second:>6.1f}"
+            f"{metric.test_name:<30} {metric.duration_s:>8.2f}s    {metric.tokens_generated:>6}     {metric.tokens_per_second:>6.1f}"
         )
 
     print("=" * 70)
 
 
-def export_results_json(filename="benchmark_results_ollama.json"):
-    """Export results to JSON for further analysis."""
+def export_results_json(filename="benchmark_results.json"):
+    """Export results to JSON."""
     if not TEST_METRICS:
         return
 
@@ -218,13 +277,13 @@ def export_results_json(filename="benchmark_results_ollama.json"):
     results = {
         "timestamp": datetime.now().isoformat(),
         "model": MODEL_NAME,
+        "test_type": "gemma3_specific",
         "platform": {
             "system": platform.system(),
             "machine": platform.machine(),
             "python_version": platform.python_version(),
-            "gpu": "NVIDIA RTX 5080 16GB",
+            "gpu": "NVIDIA Jetson Thor (128GB Unified Memory)",
             "driver": nvidia_version,
-            "runtime": "ollama",
         },
         "summary": {
             "total_tokens": sum(m.tokens_generated for m in TEST_METRICS),
@@ -242,19 +301,18 @@ def export_results_json(filename="benchmark_results_ollama.json"):
 
 
 if __name__ == "__main__":
-    print(f"[INFO] Starting Integration Tests for {MODEL_NAME} on Ollama...")
+    print("[INFO] Gemma 3 Model-Specific Tests")
+    print(f"[INFO] Model: {MODEL_NAME}")
     print(f"[INFO] API URL: {API_URL}")
+    print("[INFO] Testing unique capabilities not in comparison benchmarks\n")
 
     try:
-        # Prerequisites
+        # API Health
         test_api_health()
-        ensure_model_pulled()
 
-        # Text Tests
-        test_basic_chat()
-
-        # Add more tests here similar to Gemma vLLM if needed,
-        # but starting simple to verify integration.
+        # Unique capability tests
+        test_vision_boardwalk()
+        test_multi_turn_conversation()
 
         # Print performance report
         print_performance_report()
@@ -263,10 +321,10 @@ if __name__ == "__main__":
         export_results_json()
 
         print("\n" + "=" * 70)
-        print("[SUCCESS] All integration tests passed!")
+        print("[SUCCESS] All Gemma 3 specific tests passed!")
         print("=" * 70)
     except Exception as e:
         print("\n" + "=" * 70)
-        print(f"[FAILURE] Integration tests failed: {e}")
+        print(f"[FAILURE] Tests failed: {e}")
         print("=" * 70)
         exit(1)

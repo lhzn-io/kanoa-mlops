@@ -1,5 +1,13 @@
 #!/usr/bin/env python3
-"""Integration tests for Molmo 7B vLLM API with performance metrics."""
+"""Model-specific tests for Molmo 7B unique capabilities.
+
+Tests unique vision-specialized features:
+- Real-world photo understanding
+- Complex matplotlib plot interpretation
+- Data visualization analysis
+
+For apples-to-apples vision comparisons, use: test_vllm_vision_comparison.py
+"""
 
 import base64
 import io
@@ -72,18 +80,46 @@ def query_molmo(prompt, image_url, max_tokens=200, temperature=0.1):
         ],
         "max_tokens": max_tokens,
         "temperature": temperature,
+        "stream": True,
+        "stream_options": {"include_usage": True},
     }
 
+    print("   Streaming response...", end="", flush=True)
     start_time = time.time()
-    response = requests.post(API_URL, headers=headers, json=data)
-    duration_s = time.time() - start_time
+    response = requests.post(API_URL, headers=headers, json=data, stream=True)
 
     response.raise_for_status()
-    result = response.json()
+
+    full_content = []
+    usage = {}
+
+    for line in response.iter_lines():
+        if line:
+            line = line.decode("utf-8")
+            if line.startswith("data: "):
+                data_str = line[6:]
+                if data_str == "[DONE]":
+                    break
+                try:
+                    chunk = json.loads(data_str)
+                    if chunk.get("usage"):
+                        usage = chunk["usage"]
+
+                    if "choices" in chunk and len(chunk["choices"]) > 0:
+                        delta = chunk["choices"][0].get("delta", {})
+                        content_chunk = delta.get("content", "")
+                        if content_chunk:
+                            print(content_chunk, end="", flush=True)
+                            full_content.append(content_chunk)
+                except json.JSONDecodeError:
+                    continue
+
+    duration_s = time.time() - start_time
+    print()  # Newline after stream
 
     return (
-        result["choices"][0]["message"]["content"],
-        result.get("usage", {}),
+        "".join(full_content),
+        usage,
         duration_s,
     )
 

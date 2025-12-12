@@ -1,3 +1,16 @@
+#!/usr/bin/env python3
+"""Model-specific tests for OLMo 3 7B unique capabilities.
+
+Tests unique features showcasing OLMo 3's strengths:
+- System prompt handling (unique API pattern)
+- Python/SQL code generation
+- Multi-step reasoning
+- Scientific structured output
+- Algorithm design
+
+For apples-to-apples text comparisons, use: test_vllm_text_comparison.py
+"""
+
 import json
 import os
 import platform
@@ -7,7 +20,7 @@ from datetime import datetime
 
 import requests
 
-MODEL_NAME = os.getenv("MODEL_NAME", "allenai/Olmo-3-7B-Think")
+MODEL_NAME = os.getenv("MODEL_NAME", "allenai/Olmo-3-7B-Instruct")
 API_URL = "http://localhost:8000/v1/chat/completions"
 
 
@@ -57,26 +70,61 @@ def query_olmo3(prompt, system_prompt=None, max_tokens=4096, temperature=0.7):
     headers = {"Content-Type": "application/json"}
 
     messages = []
+    # Some models (especially reasoning models) adhere better to system instructions
+    # when they are part of the user prompt rather than a separate system role.
     if system_prompt:
-        messages.append({"role": "system", "content": system_prompt})
-    messages.append({"role": "user", "content": prompt})
+        full_prompt = f"{system_prompt}\n\nUser Request:\n{prompt}"
+        messages.append({"role": "user", "content": full_prompt})
+    else:
+        messages.append({"role": "user", "content": prompt})
 
     data = {
         "model": MODEL_NAME,
         "messages": messages,
         "max_tokens": max_tokens,
         "temperature": temperature,
+        "stream": True,
+        "stream_options": {"include_usage": True},
     }
 
+    print("[INFO] Streaming response...")
     start_time = time.time()
-    response = requests.post(API_URL, headers=headers, json=data)
-    duration_s = time.time() - start_time
+    response = requests.post(API_URL, headers=headers, json=data, stream=True)
 
     response.raise_for_status()
-    result = response.json()
+
+    full_content = []
+    usage = {}
+
+    for line in response.iter_lines():
+        if line:
+            line = line.decode("utf-8")
+            if line.startswith("data: "):
+                data_str = line[6:]
+                if data_str == "[DONE]":
+                    break
+                try:
+                    chunk = json.loads(data_str)
+                    # Handle usage if present (vLLM sends it in the last chunk)
+                    if chunk.get("usage"):
+                        usage = chunk["usage"]
+
+                    if "choices" in chunk and len(chunk["choices"]) > 0:
+                        delta = chunk["choices"][0].get("delta", {})
+                        content = delta.get("content", "")
+                        if content:
+                            print(content, end="", flush=True)
+                            full_content.append(content)
+                except json.JSONDecodeError:
+                    pass
+
+    print()  # Newline after stream
+    duration_s = time.time() - start_time
+
+    full_response_text = "".join(full_content)
     return (
-        result["choices"][0]["message"]["content"],
-        result.get("usage", {}),
+        full_response_text,
+        usage,
         duration_s,
     )
 
@@ -348,7 +396,7 @@ def print_performance_report():
     print("=" * 70)
 
 
-def export_results_json(filename="benchmark_results_olmo3.json"):
+def export_results_json(filename="benchmark_results.json"):
     """Export results to JSON for GitHub Pages or further analysis."""
     if not TEST_METRICS:
         return
@@ -386,7 +434,7 @@ def export_results_json(filename="benchmark_results_olmo3.json"):
 
 
 if __name__ == "__main__":
-    print("[INFO] Starting Integration Tests for Olmo3 32B Think...")
+    print("[INFO] Starting Integration Tests for Olmo3 7B Instruct...")
     print(f"[INFO] Model: {MODEL_NAME}")
     print(f"[INFO] API URL: {API_URL}")
     print(

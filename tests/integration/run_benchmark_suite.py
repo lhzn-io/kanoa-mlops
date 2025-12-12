@@ -1,17 +1,22 @@
 #!/usr/bin/env python3
-"""Run multiple benchmark iterations and compute statistics."""
+"""Run multiple benchmark iterations and compute statistics.
 
+Unified benchmark suite runner that works with any model test.
+"""
+
+import argparse
 import json
 import subprocess
+import sys
 import time
 from pathlib import Path
 from statistics import mean, stdev
 
 
-def run_single_benchmark():
+def run_single_benchmark(test_script: str, results_file: str):
     """Run a single benchmark and return results."""
     result = subprocess.run(
-        ["python3", "test_vllm_gemma3_api.py"],
+        ["python3", test_script],
         check=False,
         capture_output=True,
         text=True,
@@ -23,19 +28,76 @@ def run_single_benchmark():
         return None
 
     # Load the results
-    with open("benchmark_results.json", "r") as f:
-        return json.load(f)
+    results_path = Path(__file__).parent / results_file
+    try:
+        with open(results_path, "r") as f:
+            return json.load(f)
+    except FileNotFoundError:
+        print(f"[ERROR] {results_file} not found")
+        return None
 
 
 def main():
-    num_runs = 3
+    parser = argparse.ArgumentParser(
+        description="Run benchmark suite for a model",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  python3 run_benchmark_suite.py --model gemma3 --runs 5
+  python3 run_benchmark_suite.py --model molmo --runs 10
+  python3 run_benchmark_suite.py --model ollama --runs 3
+  python3 run_benchmark_suite.py --model olmo3 --runs 5
+        """,
+    )
+    parser.add_argument(
+        "--model",
+        required=True,
+        choices=["gemma3", "molmo", "ollama", "olmo3", "text-comparison", "vision-comparison"],
+        help="Model to benchmark",
+    )
+    parser.add_argument(
+        "--runs", type=int, default=3, help="Number of benchmark runs (default: 3)"
+    )
+    parser.add_argument(
+        "--test-script",
+        help="Override test script name (default: test_vllm_{model}_api.py or test_ollama_{model}.py)",
+    )
+    parser.add_argument(
+        "--results-file",
+        help="Override results filename (default: benchmark_results.json or benchmark_results_ollama.json)",
+    )
+    parser.add_argument(
+        "--output",
+        help="Override output filename (default: benchmark_statistics_{model}.json)",
+    )
+
+    args = parser.parse_args()
+
+    # Set defaults based on model
+    if args.test_script is None:
+        if args.model == "ollama":
+            args.test_script = f"test_{args.model}_gemma3.py"
+        elif args.model in ["text-comparison", "vision-comparison"]:
+            args.test_script = f"test_vllm_{args.model.replace('-', '_')}.py"
+        else:
+            args.test_script = f"test_vllm_{args.model}_specific.py"
+
+    if args.results_file is None:
+        if args.model == "ollama":
+            args.results_file = "benchmark_results_ollama.json"
+        else:
+            args.results_file = "benchmark_results.json"
+
+    if args.output is None:
+        args.output = f"benchmark_statistics_{args.model}.json"
+
     results = []
 
-    print(f"Running {num_runs} benchmark iterations...\n")
+    print(f"Running {args.runs} benchmark iterations for {args.model.upper()}...\n")
 
-    for i in range(num_runs):
-        print(f"[{i + 1}/{num_runs}] Running benchmark...")
-        result = run_single_benchmark()
+    for i in range(args.runs):
+        print(f"[{i + 1}/{args.runs}] Running benchmark...")
+        result = run_single_benchmark(args.test_script, args.results_file)
 
         if result:
             results.append(result)
@@ -49,16 +111,16 @@ def main():
             print("  ✗ Failed\n")
 
         # Brief pause between runs
-        if i < num_runs - 1:
+        if i < args.runs - 1:
             time.sleep(2)
 
     if not results:
         print("[ERROR] No successful runs")
-        return
+        sys.exit(1)
 
     # Compute statistics
     print("=" * 70)
-    print("BENCHMARK STATISTICS")
+    print(f"BENCHMARK STATISTICS - {args.model.upper()}")
     print("=" * 70)
     print(f"\nRuns completed: {len(results)}")
 
@@ -136,7 +198,7 @@ def main():
             "max": max(test_throughputs),
         }
 
-    output_path = Path(__file__).parent / "benchmark_statistics_gemma3.json"
+    output_path = Path(__file__).parent / args.output
 
     # Load existing results if they exist
     existing_data = []
