@@ -67,9 +67,9 @@ def query_model(prompt, max_tokens=500, temperature=0.7):
 
     for line in response.iter_lines():
         if line:
-            line = line.decode("utf-8")
-            if line.startswith("data: "):
-                data_str = line[6:]
+            decoded_line = line.decode("utf-8")
+            if decoded_line.startswith("data: "):
+                data_str = decoded_line[6:]
                 if data_str == "[DONE]":
                     break
                 try:

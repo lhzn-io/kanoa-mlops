@@ -95,9 +95,9 @@ def query_molmo(prompt, image_url, max_tokens=200, temperature=0.1):
 
     for line in response.iter_lines():
         if line:
-            line = line.decode("utf-8")
-            if line.startswith("data: "):
-                data_str = line[6:]
+            decoded_line = line.decode("utf-8")
+            if decoded_line.startswith("data: "):
+                data_str = decoded_line[6:]
                 if data_str == "[DONE]":
                     break
                 try:
@@ -129,17 +129,30 @@ def test_boardwalk_photo():
     print("\n[TEST] Testing Boardwalk Photo (URL -> Base64)...")
     image_url = "https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/Gfp-wisconsin-madison-the-nature-boardwalk.jpg/960px-Gfp-wisconsin-madison-the-nature-boardwalk.jpg"
 
+    # Cache path
+    cache_dir = Path(__file__).parent / "data"
+    cache_dir.mkdir(exist_ok=True)
+    local_image_path = cache_dir / "boardwalk.jpg"
+
     try:
-        # Download image locally first to avoid container networking issues
-        print(f"   Downloading {image_url}...")
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-        }
-        img_resp = requests.get(image_url, headers=headers)
-        img_resp.raise_for_status()
+        if local_image_path.exists():
+            print(f"   Using cached image: {local_image_path}")
+            img = Image.open(local_image_path)
+        else:
+            # Download image locally first to avoid container networking issues
+            print(f"   Downloading {image_url}...")
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+            }
+            img_resp = requests.get(image_url, headers=headers)
+            img_resp.raise_for_status()
+
+            img = Image.open(io.BytesIO(img_resp.content))
+            # Save to cache
+            img.save(local_image_path)
+            print(f"   Cached image to: {local_image_path}")
 
         # Convert to Base64
-        img = Image.open(io.BytesIO(img_resp.content))
         # Resize if too large (Molmo handles large images well, but let's be safe and fast)
         if max(img.size) > 1024:
             img.thumbnail((1024, 1024))

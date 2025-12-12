@@ -96,9 +96,9 @@ def query_ollama(prompt, max_tokens=200, temperature=0.7, image_url=None):
 
     for line in response.iter_lines():
         if line:
-            line = line.decode("utf-8")
-            if line.startswith("data: "):
-                data_str = line[6:]
+            decoded_line = line.decode("utf-8")
+            if decoded_line.startswith("data: "):
+                data_str = decoded_line[6:]
                 if data_str == "[DONE]":
                     break
                 try:

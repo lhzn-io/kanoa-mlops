@@ -377,374 +377,374 @@
   },
   {
     "num_runs": 10,
-    "timestamp": "2025-12-08T19:08:50",
+    "timestamp": "2025-12-12T11:26:26",
     "model": "allenai/Molmo-7B-D-0924",
     "platform": "NVIDIA Jetson Thor (Blackwell sm_110)",
     "statistics": {
       "overall": {
-        "mean_throughput": 11.079899320330226,
-        "std_throughput": 3.109309094729655,
-        "min_throughput": 7.514233702808696,
-        "max_throughput": 14.019084410116141
+        "mean_throughput": 9.264918292575416,
+        "std_throughput": 3.220219502344067,
+        "min_throughput": 7.175909102752135,
+        "max_throughput": 14.941715535289749
       },
       "per_test": {
         "Boardwalk Photo": {
-          "mean": 10.682042705204067,
-          "std": 3.1972717404787065,
-          "min": 7.466454539636897,
-          "max": 13.922735748742744
+          "mean": 8.802744259548938,
+          "std": 2.894637966550129,
+          "min": 7.010407335047183,
+          "max": 14.899499081725953
         },
         "Complex Plot": {
-          "mean": 11.283611405710849,
-          "std": 3.1869961781165386,
-          "min": 7.4964057750669335,
-          "max": 14.231989889165355
+          "mean": 9.604599295981721,
+          "std": 3.7568367905530975,
+          "min": 7.107953973323242,
+          "max": 15.68732654650854
         },
         "Data Interpretation": {
-          "mean": 11.334531468616664,
-          "std": 3.2156199098130096,
-          "min": 7.368989795445134,
-          "max": 14.180498091098423
+          "mean": 9.50773394014021,
+          "std": 3.499714871580564,
+          "min": 7.077686728283664,
+          "max": 15.41415746915968
         }
       }
     },
     "raw_results": [
       {
-        "timestamp": "2025-12-08T19:00:20.546445",
+        "timestamp": "2025-12-12T11:17:06.807890",
         "model": "allenai/Molmo-7B-D-0924",
         "platform": "NVIDIA Jetson Thor (Blackwell sm_110)",
         "summary": {
           "total_tests": 3,
-          "total_tokens": 626,
-          "total_duration_s": 81.84635853767395,
-          "avg_tokens_per_second": 7.648477112293905
+          "total_tokens": 581,
+          "total_duration_s": 80.96535110473633,
+          "avg_tokens_per_second": 7.175909102752135
         },
         "tests": [
           {
             "test_name": "Boardwalk Photo",
-            "duration_s": 21.206371068954468,
-            "tokens_generated": 164,
-            "tokens_per_second": 7.733524961283517,
+            "duration_s": 23.251145362854004,
+            "tokens_generated": 163,
+            "tokens_per_second": 7.010407335047183,
             "prompt_tokens": 1207
           },
           {
             "test_name": "Complex Plot",
-            "duration_s": 39.378060817718506,
+            "duration_s": 41.57938194274902,
             "tokens_generated": 300,
-            "tokens_per_second": 7.618455398012194,
+            "tokens_per_second": 7.215114462573599,
             "prompt_tokens": 1214
           },
           {
             "test_name": "Data Interpretation",
-            "duration_s": 21.261926651000977,
-            "tokens_generated": 162,
-            "tokens_per_second": 7.6192530742444875,
-            "prompt_tokens": 1217
-          }
-        ]
-      },
-      {
-        "timestamp": "2025-12-08T19:01:45.550333",
-        "model": "allenai/Molmo-7B-D-0924",
-        "platform": "NVIDIA Jetson Thor (Blackwell sm_110)",
-        "summary": {
-          "total_tests": 3,
-          "total_tokens": 614,
-          "total_duration_s": 81.71159219741821,
-          "avg_tokens_per_second": 7.514233702808696
-        },
-        "tests": [
-          {
-            "test_name": "Boardwalk Photo",
-            "duration_s": 23.91521453857422,
-            "tokens_generated": 183,
-            "tokens_per_second": 7.652032546261662,
-            "prompt_tokens": 1207
-          },
-          {
-            "test_name": "Complex Plot",
-            "duration_s": 40.01917839050293,
-            "tokens_generated": 300,
-            "tokens_per_second": 7.4964057750669335,
-            "prompt_tokens": 1214
-          },
-          {
-            "test_name": "Data Interpretation",
-            "duration_s": 17.777199268341064,
-            "tokens_generated": 131,
-            "tokens_per_second": 7.368989795445134,
-            "prompt_tokens": 1217
-          }
-        ]
-      },
-      {
-        "timestamp": "2025-12-08T19:03:10.014489",
-        "model": "allenai/Molmo-7B-D-0924",
-        "platform": "NVIDIA Jetson Thor (Blackwell sm_110)",
-        "summary": {
-          "total_tests": 3,
-          "total_tokens": 616,
-          "total_duration_s": 81.07422351837158,
-          "avg_tokens_per_second": 7.597975944356879
-        },
-        "tests": [
-          {
-            "test_name": "Boardwalk Photo",
-            "duration_s": 18.348735570907593,
-            "tokens_generated": 137,
-            "tokens_per_second": 7.466454539636897,
-            "prompt_tokens": 1207
-          },
-          {
-            "test_name": "Complex Plot",
-            "duration_s": 39.59426808357239,
-            "tokens_generated": 300,
-            "tokens_per_second": 7.576854290292327,
-            "prompt_tokens": 1214
-          },
-          {
-            "test_name": "Data Interpretation",
-            "duration_s": 23.1312198638916,
-            "tokens_generated": 179,
-            "tokens_per_second": 7.738459149723589,
-            "prompt_tokens": 1217
-          }
-        ]
-      },
-      {
-        "timestamp": "2025-12-08T19:04:23.050001",
-        "model": "allenai/Molmo-7B-D-0924",
-        "platform": "NVIDIA Jetson Thor (Blackwell sm_110)",
-        "summary": {
-          "total_tests": 3,
-          "total_tokens": 540,
-          "total_duration_s": 69.89496326446533,
-          "avg_tokens_per_second": 7.725878586655421
-        },
-        "tests": [
-          {
-            "test_name": "Boardwalk Photo",
-            "duration_s": 15.951559066772461,
-            "tokens_generated": 122,
-            "tokens_per_second": 7.648155236069017,
-            "prompt_tokens": 1207
-          },
-          {
-            "test_name": "Complex Plot",
-            "duration_s": 38.61993908882141,
-            "tokens_generated": 300,
-            "tokens_per_second": 7.7680081087138575,
-            "prompt_tokens": 1214
-          },
-          {
-            "test_name": "Data Interpretation",
-            "duration_s": 15.32346510887146,
+            "duration_s": 16.1348237991333,
             "tokens_generated": 118,
-            "tokens_per_second": 7.7006081301861915,
+            "tokens_per_second": 7.3133739462552105,
             "prompt_tokens": 1217
           }
         ]
       },
       {
-        "timestamp": "2025-12-08T19:05:20.662066",
+        "timestamp": "2025-12-12T11:18:15.861198",
         "model": "allenai/Molmo-7B-D-0924",
         "platform": "NVIDIA Jetson Thor (Blackwell sm_110)",
         "summary": {
           "total_tests": 3,
-          "total_tokens": 595,
-          "total_duration_s": 54.38690114021301,
-          "avg_tokens_per_second": 10.940134251555367
+          "total_tokens": 472,
+          "total_duration_s": 65.71979570388794,
+          "avg_tokens_per_second": 7.182006501156497
         },
         "tests": [
           {
             "test_name": "Boardwalk Photo",
-            "duration_s": 21.1422598361969,
-            "tokens_generated": 164,
-            "tokens_per_second": 7.756975899010641,
-            "prompt_tokens": 1207
-          },
-          {
-            "test_name": "Complex Plot",
-            "duration_s": 23.790714025497437,
-            "tokens_generated": 300,
-            "tokens_per_second": 12.609962007801796,
-            "prompt_tokens": 1214
-          },
-          {
-            "test_name": "Data Interpretation",
-            "duration_s": 9.453927278518677,
-            "tokens_generated": 131,
-            "tokens_per_second": 13.856675235662085,
-            "prompt_tokens": 1217
-          }
-        ]
-      },
-      {
-        "timestamp": "2025-12-08T19:05:57.907056",
-        "model": "allenai/Molmo-7B-D-0924",
-        "platform": "NVIDIA Jetson Thor (Blackwell sm_110)",
-        "summary": {
-          "total_tests": 3,
-          "total_tokens": 465,
-          "total_duration_s": 33.96818017959595,
-          "avg_tokens_per_second": 13.689282073442275
-        },
-        "tests": [
-          {
-            "test_name": "Boardwalk Photo",
-            "duration_s": 10.045276403427124,
-            "tokens_generated": 136,
-            "tokens_per_second": 13.538701628319673,
-            "prompt_tokens": 1207
-          },
-          {
-            "test_name": "Complex Plot",
-            "duration_s": 21.819911003112793,
-            "tokens_generated": 300,
-            "tokens_per_second": 13.748910339606907,
-            "prompt_tokens": 1214
-          },
-          {
-            "test_name": "Data Interpretation",
-            "duration_s": 2.1029927730560303,
-            "tokens_generated": 29,
-            "tokens_per_second": 13.78987144965683,
-            "prompt_tokens": 1217
-          }
-        ]
-      },
-      {
-        "timestamp": "2025-12-08T19:06:37.355615",
-        "model": "allenai/Molmo-7B-D-0924",
-        "platform": "NVIDIA Jetson Thor (Blackwell sm_110)",
-        "summary": {
-          "total_tests": 3,
-          "total_tokens": 504,
-          "total_duration_s": 36.01347589492798,
-          "avg_tokens_per_second": 13.994761335186247
-        },
-        "tests": [
-          {
-            "test_name": "Boardwalk Photo",
-            "duration_s": 12.166142225265503,
+            "duration_s": 22.66093611717224,
             "tokens_generated": 166,
-            "tokens_per_second": 13.644423756222968,
+            "tokens_per_second": 7.3253814026776585,
             "prompt_tokens": 1207
           },
           {
             "test_name": "Complex Plot",
-            "duration_s": 21.079272985458374,
-            "tokens_generated": 300,
-            "tokens_per_second": 14.231989889165355,
+            "duration_s": 38.97042679786682,
+            "tokens_generated": 277,
+            "tokens_per_second": 7.107953973323242,
             "prompt_tokens": 1214
           },
           {
             "test_name": "Data Interpretation",
-            "duration_s": 2.7680606842041016,
-            "tokens_generated": 38,
-            "tokens_per_second": 13.728022733333287,
+            "duration_s": 4.088432788848877,
+            "tokens_generated": 29,
+            "tokens_per_second": 7.093182521942626,
             "prompt_tokens": 1217
           }
         ]
       },
       {
-        "timestamp": "2025-12-08T19:07:26.556971",
+        "timestamp": "2025-12-12T11:19:42.857260",
         "model": "allenai/Molmo-7B-D-0924",
         "platform": "NVIDIA Jetson Thor (Blackwell sm_110)",
         "summary": {
           "total_tests": 3,
-          "total_tokens": 636,
-          "total_duration_s": 45.76064157485962,
-          "avg_tokens_per_second": 13.898406536970654
+          "total_tokens": 628,
+          "total_duration_s": 83.63415694236755,
+          "avg_tokens_per_second": 7.508893769716074
         },
         "tests": [
           {
             "test_name": "Boardwalk Photo",
-            "duration_s": 12.497543811798096,
-            "tokens_generated": 174,
-            "tokens_per_second": 13.922735748742744,
+            "duration_s": 19.60716676712036,
+            "tokens_generated": 148,
+            "tokens_per_second": 7.5482603763122,
             "prompt_tokens": 1207
           },
           {
             "test_name": "Complex Plot",
-            "duration_s": 21.6631920337677,
+            "duration_s": 40.232935190200806,
             "tokens_generated": 300,
-            "tokens_per_second": 13.848374677765504,
+            "tokens_per_second": 7.456577517443183,
             "prompt_tokens": 1214
           },
           {
             "test_name": "Data Interpretation",
-            "duration_s": 11.599905729293823,
+            "duration_s": 23.794054985046387,
+            "tokens_generated": 180,
+            "tokens_per_second": 7.564914854282837,
+            "prompt_tokens": 1217
+          }
+        ]
+      },
+      {
+        "timestamp": "2025-12-12T11:20:53.612333",
+        "model": "allenai/Molmo-7B-D-0924",
+        "platform": "NVIDIA Jetson Thor (Blackwell sm_110)",
+        "summary": {
+          "total_tests": 3,
+          "total_tokens": 489,
+          "total_duration_s": 67.37465906143188,
+          "avg_tokens_per_second": 7.257921699524033
+        },
+        "tests": [
+          {
+            "test_name": "Boardwalk Photo",
+            "duration_s": 20.72623872756958,
+            "tokens_generated": 153,
+            "tokens_per_second": 7.381947202821842,
+            "prompt_tokens": 1207
+          },
+          {
+            "test_name": "Complex Plot",
+            "duration_s": 41.562012672424316,
+            "tokens_generated": 300,
+            "tokens_per_second": 7.2181297466146255,
+            "prompt_tokens": 1214
+          },
+          {
+            "test_name": "Data Interpretation",
+            "duration_s": 5.086407661437988,
+            "tokens_generated": 36,
+            "tokens_per_second": 7.077686728283664,
+            "prompt_tokens": 1217
+          }
+        ]
+      },
+      {
+        "timestamp": "2025-12-12T11:22:04.705588",
+        "model": "allenai/Molmo-7B-D-0924",
+        "platform": "NVIDIA Jetson Thor (Blackwell sm_110)",
+        "summary": {
+          "total_tests": 3,
+          "total_tokens": 489,
+          "total_duration_s": 67.80939865112305,
+          "avg_tokens_per_second": 7.211389714807643
+        },
+        "tests": [
+          {
+            "test_name": "Boardwalk Photo",
+            "duration_s": 20.753765106201172,
+            "tokens_generated": 147,
+            "tokens_per_second": 7.083052123206154,
+            "prompt_tokens": 1207
+          },
+          {
+            "test_name": "Complex Plot",
+            "duration_s": 41.143845319747925,
+            "tokens_generated": 300,
+            "tokens_per_second": 7.291491538249785,
+            "prompt_tokens": 1214
+          },
+          {
+            "test_name": "Data Interpretation",
+            "duration_s": 5.91178822517395,
+            "tokens_generated": 42,
+            "tokens_per_second": 7.104449347686872,
+            "prompt_tokens": 1217
+          }
+        ]
+      },
+      {
+        "timestamp": "2025-12-12T11:23:16.700836",
+        "model": "allenai/Molmo-7B-D-0924",
+        "platform": "NVIDIA Jetson Thor (Blackwell sm_110)",
+        "summary": {
+          "total_tests": 3,
+          "total_tokens": 500,
+          "total_duration_s": 68.71301889419556,
+          "avg_tokens_per_second": 7.276641429041286
+        },
+        "tests": [
+          {
+            "test_name": "Boardwalk Photo",
+            "duration_s": 22.229517459869385,
+            "tokens_generated": 164,
+            "tokens_per_second": 7.377578046670007,
+            "prompt_tokens": 1207
+          },
+          {
+            "test_name": "Complex Plot",
+            "duration_s": 41.62578773498535,
+            "tokens_generated": 300,
+            "tokens_per_second": 7.207070816532755,
+            "prompt_tokens": 1214
+          },
+          {
+            "test_name": "Data Interpretation",
+            "duration_s": 4.85771369934082,
+            "tokens_generated": 36,
+            "tokens_per_second": 7.410893730704037,
+            "prompt_tokens": 1217
+          }
+        ]
+      },
+      {
+        "timestamp": "2025-12-12T11:24:25.397568",
+        "model": "allenai/Molmo-7B-D-0924",
+        "platform": "NVIDIA Jetson Thor (Blackwell sm_110)",
+        "summary": {
+          "total_tests": 3,
+          "total_tokens": 489,
+          "total_duration_s": 65.35048723220825,
+          "avg_tokens_per_second": 7.482729214587927
+        },
+        "tests": [
+          {
+            "test_name": "Boardwalk Photo",
+            "duration_s": 21.54630994796753,
+            "tokens_generated": 160,
+            "tokens_per_second": 7.425865514159321,
+            "prompt_tokens": 1207
+          },
+          {
+            "test_name": "Complex Plot",
+            "duration_s": 40.13097071647644,
+            "tokens_generated": 300,
+            "tokens_per_second": 7.4755231344760364,
+            "prompt_tokens": 1214
+          },
+          {
+            "test_name": "Data Interpretation",
+            "duration_s": 3.6732065677642822,
+            "tokens_generated": 29,
+            "tokens_per_second": 7.895009296373717,
+            "prompt_tokens": 1217
+          }
+        ]
+      },
+      {
+        "timestamp": "2025-12-12T11:25:05.540889",
+        "model": "allenai/Molmo-7B-D-0924",
+        "platform": "NVIDIA Jetson Thor (Blackwell sm_110)",
+        "summary": {
+          "total_tests": 3,
+          "total_tokens": 463,
+          "total_duration_s": 37.023417949676514,
+          "avg_tokens_per_second": 12.505598500638847
+        },
+        "tests": [
+          {
+            "test_name": "Boardwalk Photo",
+            "duration_s": 16.201642513275146,
+            "tokens_generated": 137,
+            "tokens_per_second": 8.455932778898575,
+            "prompt_tokens": 1207
+          },
+          {
+            "test_name": "Complex Plot",
+            "duration_s": 18.486260175704956,
+            "tokens_generated": 290,
+            "tokens_per_second": 15.68732654650854,
+            "prompt_tokens": 1214
+          },
+          {
+            "test_name": "Data Interpretation",
+            "duration_s": 2.335515260696411,
+            "tokens_generated": 36,
+            "tokens_per_second": 15.41415746915968,
+            "prompt_tokens": 1217
+          }
+        ]
+      },
+      {
+        "timestamp": "2025-12-12T11:25:42.077119",
+        "model": "allenai/Molmo-7B-D-0924",
+        "platform": "NVIDIA Jetson Thor (Blackwell sm_110)",
+        "summary": {
+          "total_tests": 3,
+          "total_tokens": 496,
+          "total_duration_s": 33.19565272331238,
+          "avg_tokens_per_second": 14.941715535289749
+        },
+        "tests": [
+          {
+            "test_name": "Boardwalk Photo",
+            "duration_s": 10.335917949676514,
+            "tokens_generated": 154,
+            "tokens_per_second": 14.899499081725953,
+            "prompt_tokens": 1207
+          },
+          {
+            "test_name": "Complex Plot",
+            "duration_s": 19.852667331695557,
+            "tokens_generated": 300,
+            "tokens_per_second": 15.111319551556598,
+            "prompt_tokens": 1214
+          },
+          {
+            "test_name": "Data Interpretation",
+            "duration_s": 3.0070674419403076,
+            "tokens_generated": 42,
+            "tokens_per_second": 13.967096119699775,
+            "prompt_tokens": 1217
+          }
+        ]
+      },
+      {
+        "timestamp": "2025-12-12T11:26:26.312214",
+        "model": "allenai/Molmo-7B-D-0924",
+        "platform": "NVIDIA Jetson Thor (Blackwell sm_110)",
+        "summary": {
+          "total_tests": 3,
+          "total_tokens": 578,
+          "total_duration_s": 40.97437500953674,
+          "avg_tokens_per_second": 14.106377458239963
+        },
+        "tests": [
+          {
+            "test_name": "Boardwalk Photo",
+            "duration_s": 8.58018708229065,
+            "tokens_generated": 116,
+            "tokens_per_second": 13.519518733970486,
+            "prompt_tokens": 1207
+          },
+          {
+            "test_name": "Complex Plot",
+            "duration_s": 21.01504683494568,
+            "tokens_generated": 300,
+            "tokens_per_second": 14.275485672538853,
+            "prompt_tokens": 1214
+          },
+          {
+            "test_name": "Data Interpretation",
+            "duration_s": 11.379141092300415,
             "tokens_generated": 162,
-            "tokens_per_second": 13.965630737057912,
-            "prompt_tokens": 1217
-          }
-        ]
-      },
-      {
-        "timestamp": "2025-12-08T19:08:06.577082",
-        "model": "allenai/Molmo-7B-D-0924",
-        "platform": "NVIDIA Jetson Thor (Blackwell sm_110)",
-        "summary": {
-          "total_tests": 3,
-          "total_tokens": 504,
-          "total_duration_s": 36.59928917884827,
-          "avg_tokens_per_second": 13.770759249916674
-        },
-        "tests": [
-          {
-            "test_name": "Boardwalk Photo",
-            "duration_s": 13.292366981506348,
-            "tokens_generated": 181,
-            "tokens_per_second": 13.61683741141251,
-            "prompt_tokens": 1207
-          },
-          {
-            "test_name": "Complex Plot",
-            "duration_s": 21.59015917778015,
-            "tokens_generated": 300,
-            "tokens_per_second": 13.8952194622423,
-            "prompt_tokens": 1214
-          },
-          {
-            "test_name": "Data Interpretation",
-            "duration_s": 1.7167630195617676,
-            "tokens_generated": 23,
-            "tokens_per_second": 13.397306289758696,
-            "prompt_tokens": 1217
-          }
-        ]
-      },
-      {
-        "timestamp": "2025-12-08T19:08:49.976109",
-        "model": "allenai/Molmo-7B-D-0924",
-        "platform": "NVIDIA Jetson Thor (Blackwell sm_110)",
-        "summary": {
-          "total_tests": 3,
-          "total_tokens": 560,
-          "total_duration_s": 39.945547342300415,
-          "avg_tokens_per_second": 14.019084410116141
-        },
-        "tests": [
-          {
-            "test_name": "Boardwalk Photo",
-            "duration_s": 10.259681701660156,
-            "tokens_generated": 142,
-            "tokens_per_second": 13.840585325081037,
-            "prompt_tokens": 1207
-          },
-          {
-            "test_name": "Complex Plot",
-            "duration_s": 21.364578247070312,
-            "tokens_generated": 300,
-            "tokens_per_second": 14.041934108441316,
-            "prompt_tokens": 1214
-          },
-          {
-            "test_name": "Data Interpretation",
-            "duration_s": 8.321287393569946,
-            "tokens_generated": 118,
-            "tokens_per_second": 14.180498091098423,
+            "tokens_per_second": 14.236575387013676,
             "prompt_tokens": 1217
           }
         ]

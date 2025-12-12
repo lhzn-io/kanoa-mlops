@@ -62,3 +62,4 @@ docker/
 # Benchmarks
 tests/integration/benchmark_results.json
 tests/integration/benchmark_results_*.json
+tests/integration/data/boardwalk.jpg

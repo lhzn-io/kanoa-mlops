@@ -17,11 +17,12 @@ import platform
 import time
 from dataclasses import asdict, dataclass
 from datetime import datetime
+from pathlib import Path
 
 import requests
 from PIL import Image
 
-MODEL_NAME = "gemma-3-12b"
+MODEL_NAME = "google/gemma-3-12b-it"
 API_URL = "http://localhost:8000/v1/chat/completions"
 
 
@@ -84,9 +85,9 @@ def query_gemma(prompt, max_tokens=200, temperature=0.7, image_url=None):
 
     for line in response.iter_lines():
         if line:
-            line = line.decode("utf-8")
-            if line.startswith("data: "):
-                data_str = line[6:]
+            decoded_line = line.decode("utf-8")
+            if decoded_line.startswith("data: "):
+                data_str = decoded_line[6:]
                 if data_str == "[DONE]":
                     break
                 try:
@@ -118,16 +119,29 @@ def test_vision_boardwalk():
     print("\n[TEST] Vision - Real World Photo (Boardwalk)")
     image_url = "https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/Gfp-wisconsin-madison-the-nature-boardwalk.jpg/960px-Gfp-wisconsin-madison-the-nature-boardwalk.jpg"
 
-    # Download image and convert to base64
-    print(f"   Downloading image...")
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-    }
-    img_resp = requests.get(image_url, headers=headers)
-    img_resp.raise_for_status()
+    # Cache path
+    cache_dir = Path(__file__).parent / "data"
+    cache_dir.mkdir(exist_ok=True)
+    local_image_path = cache_dir / "boardwalk.jpg"
+
+    if local_image_path.exists():
+        print(f"   Using cached image: {local_image_path}")
+        img = Image.open(local_image_path)
+    else:
+        # Download image and convert to base64
+        print("   Downloading image...")
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+        }
+        img_resp = requests.get(image_url, headers=headers)
+        img_resp.raise_for_status()
+
+        img = Image.open(io.BytesIO(img_resp.content))
+        # Save to cache
+        img.save(local_image_path)
+        print(f"   Cached image to: {local_image_path}")
 
     # Convert to Base64
-    img = Image.open(io.BytesIO(img_resp.content))
     if max(img.size) > 1024:
         img.thumbnail((1024, 1024))
 

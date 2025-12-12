@@ -52,11 +52,24 @@ Examples:
     parser.add_argument(
         "--model",
         required=True,
-        choices=["gemma3", "molmo", "ollama", "olmo3", "text-comparison", "vision-comparison"],
+        choices=[
+            "gemma3",
+            "molmo",
+            "ollama",
+            "olmo3",
+            "text-comparison",
+            "vision-comparison",
+        ],
         help="Model to benchmark",
     )
     parser.add_argument(
         "--runs", type=int, default=3, help="Number of benchmark runs (default: 3)"
+    )
+    parser.add_argument(
+        "--warmup",
+        type=int,
+        default=0,
+        help="Number of warmup runs to discard (default: 0)",
     )
     parser.add_argument(
         "--test-script",
@@ -93,14 +106,21 @@ Examples:
 
     results = []
 
-    print(f"Running {args.runs} benchmark iterations for {args.model.upper()}...\n")
+    total_iterations = args.runs + args.warmup
+    print(
+        f"Running {total_iterations} iterations for {args.model.upper()} ({args.warmup} warmup + {args.runs} measured)...\n"
+    )
 
-    for i in range(args.runs):
-        print(f"[{i + 1}/{args.runs}] Running benchmark...")
+    for i in range(total_iterations):
+        is_warmup = i < args.warmup
+        prefix = "[WARMUP]" if is_warmup else f"[{i - args.warmup + 1}/{args.runs}]"
+
+        print(f"{prefix} Running benchmark...")
         result = run_single_benchmark(args.test_script, args.results_file)
 
         if result:
-            results.append(result)
+            if not is_warmup:
+                results.append(result)
             print(
                 f"  ✓ Completed: {result['summary']['total_tokens']} tokens in {result['summary']['total_duration_s']:.1f}s"
             )
@@ -111,7 +131,7 @@ Examples:
             print("  ✗ Failed\n")
 
         # Brief pause between runs
-        if i < args.runs - 1:
+        if i < total_iterations - 1:
             time.sleep(2)
 
     if not results:

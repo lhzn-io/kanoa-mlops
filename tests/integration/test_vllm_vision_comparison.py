@@ -128,9 +128,9 @@ def query_vision_model(prompt, image_url, max_tokens=300, temperature=0.7):
 
     for line in response.iter_lines():
         if line:
-            line = line.decode("utf-8")
-            if line.startswith("data: "):
-                data_str = line[6:]
+            decoded_line = line.decode("utf-8")
+            if decoded_line.startswith("data: "):
+                data_str = decoded_line[6:]
                 if data_str == "[DONE]":
                     break
                 try:
@@ -190,9 +190,9 @@ def test_chart_analysis():
     print(
         f"[PERF] {duration:.2f}s | {tokens_generated} tokens | {tokens_per_sec:.1f} tok/s"
     )
-    assert "q4" in response.lower() or "quarter 4" in response.lower() or "71" in response, (
-        "Expected mention of Q4 or highest value"
-    )
+    assert (
+        "q4" in response.lower() or "quarter 4" in response.lower() or "71" in response
+    ), "Expected mention of Q4 or highest value"
     print("[PASS] Chart analysis test passed")
 
 
