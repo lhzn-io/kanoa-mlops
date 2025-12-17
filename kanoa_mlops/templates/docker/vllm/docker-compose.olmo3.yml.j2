@@ -15,6 +15,8 @@ services:
       - ${HF_HOME:-~/.cache/huggingface}:/root/.cache/huggingface:rw
     environment:
       - CUDA_VISIBLE_DEVICES=0
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=all
       - HF_HOME=/root/.cache/huggingface
       - HUGGINGFACE_HUB_CACHE=/root/.cache/huggingface/hub
       - TRANSFORMERS_CACHE=/root/.cache/huggingface
@@ -23,14 +25,14 @@ services:
       - HF_HUB_OFFLINE=${HF_HUB_OFFLINE:-0}
     command: >
       vllm serve
-      --model ${MODEL_NAME:-allenai/Olmo-3-32B-Think}
+      --model ${MODEL_NAME:-allenai/Olmo-3-7B-Think}
       --host 0.0.0.0
       --port 8000
-      --served-model-name ${SERVED_MODEL_NAME:-allenai/Olmo-3-32B-Think}
+      --served-model-name ${SERVED_MODEL_NAME:-allenai/Olmo-3-7B-Think}
       --trust-remote-code
-      --max-model-len 8192
+      --max-model-len 32768
       --max-num-seqs 5
-      --gpu-memory-utilization 0.8
+      --gpu-memory-utilization 0.6
       --kv-cache-dtype fp8
       --enable-chunked-prefill
       --dtype bfloat16
