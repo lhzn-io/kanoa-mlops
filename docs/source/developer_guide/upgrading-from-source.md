@@ -32,7 +32,7 @@ The core value of `kanoa-mlops` is the curated set of Docker templates. When the
 Run the `init` command with the `--force` flag to overwrite existing files in your `docker/` directory:
 
 ```bash
-kanoa mlops init mlops --dir . --force
+kanoa mlops init --dir . --force
 ```
 
 > ⚠️ **Warning**: This will overwrite any manual changes you've made to files in `docker/`. If you have customized your compose files, verify the changes with `git diff` before committing.

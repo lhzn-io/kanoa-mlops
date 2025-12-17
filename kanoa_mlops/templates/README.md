@@ -2,6 +2,6 @@
 
 Minimal Docker templates for running local AI services.
 
-Scaffolded by `kanoa mlops init mlops`.
+Scaffolded by `kanoa mlops init`.
 
 See [docker/README.md](docker/README.md) for usage.

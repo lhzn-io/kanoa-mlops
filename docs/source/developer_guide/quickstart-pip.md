@@ -33,10 +33,11 @@ Scaffold the docker templates into your project:
 
 ```bash
 cd your-project/
-kanoa mlops init mlops --dir .
+kanoa mlops init --dir .
 ```
 
 This creates:
+
 ```
 your-project/
 └── docker/
@@ -89,7 +90,7 @@ kanoa mlops serve monitoring
 
 | Command | Description |
 |---------|-------------|
-| `kanoa mlops init mlops --dir .` | Scaffold docker templates |
+| `kanoa mlops init --dir .` | Scaffold docker templates |
 | `kanoa mlops serve ollama` | Start Ollama server |
 | `kanoa mlops serve monitoring` | Start monitoring stack |
 | `kanoa stop` | Stop all services |
@@ -105,11 +106,12 @@ kanoa mlops serve monitoring
 
 ### "kanoa-mlops not initialized"
 
-Run `kanoa mlops init mlops --dir .` first.
+Run `kanoa mlops init --dir .` first.
 
 ### Docker GPU not detected
 
 Ensure NVIDIA Container Toolkit is installed:
+
 ```bash
 nvidia-smi  # Should show your GPU
 docker run --rm --gpus all nvidia/cuda:12.0-base nvidia-smi  # Should work

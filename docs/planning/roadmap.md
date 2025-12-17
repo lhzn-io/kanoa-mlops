@@ -40,6 +40,7 @@
     - [ ] **Benchmark Plan**: [Model Evaluation](benchmark_plan_jetson_thor.md)
 
 ### Phase 2: Grounding Integration (Q1 2026)
+
 - **Strategy**: Prioritize integration with existing Grounding/RAG frameworks over building custom infrastructure.
 - **Analysis**:
   - [ ] **Framework Survey**: Identify hosted or local frameworks that provide robust Grounding (e.g., LangChain, LlamaIndex, or specialized vector providers).
@@ -49,7 +50,7 @@
 
 ### Phase 2 Update: Intelligent Initialization
 
-- **Smart Model Selection**: `kanoa mlops init mlops` will automatically select the largest model from each family that fits the detected hardware architecture.
+- **Smart Model Selection**: `kanoa mlops init` will automatically select the largest model from each family that fits the detected hardware architecture.
 - **Jetson Thor Candidates**:
   - **General**: Llama 4 Maverick (17B)
   - **Reasoning**: Olmo 3 Think (32B)

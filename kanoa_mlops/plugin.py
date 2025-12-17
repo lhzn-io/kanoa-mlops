@@ -4,7 +4,7 @@ Plugin for kanoa CLI to manage local MLOps services.
 All operations delegate to docker-compose for single source of truth.
 Supports both:
   1. Development mode (running from cloned repo)
-  2. PyPI install mode (templates copied via `kanoa mlops init mlops`)
+  2. PyPI install mode (templates copied via `kanoa mlops init`)
 """
 
 import json
@@ -735,7 +735,7 @@ def handle_serve(args) -> None:
 
     if not mlops_path:
         console.print("[red]Error: kanoa-mlops not initialized.[/red]")
-        console.print("Run: kanoa mlops init mlops --dir ./my-project")
+        console.print("Run: kanoa mlops init --dir ./my-project")
         sys.exit(1)
 
     runtime = getattr(args, "runtime", None)
@@ -1256,7 +1256,7 @@ def handle_status(args) -> None:
         console.print(f"[green]✔ Configured path:[/green] {mlops_path}")
     else:
         console.print("[yellow]✘ Not initialized[/yellow]")
-        console.print("  Run: kanoa mlops init mlops --dir ./my-project")
+        console.print("  Run: kanoa mlops init --dir ./my-project")
         return
 
     # Check docker services
@@ -1446,7 +1446,7 @@ def _handle_mlops_help(args) -> None:
     console.print("  status     Show configuration and service status")
     console.print("  list       List available services and models")
     console.print("\n[bold]Examples:[/bold]")
-    console.print("  kanoa mlops init mlops --dir .")
+    console.print("  kanoa mlops init --dir .")
     console.print("  kanoa mlops serve ollama")
     console.print("  kanoa mlops serve vllm molmo")
     console.print("  kanoa mlops status")
@@ -1477,11 +1477,6 @@ def register(subparsers) -> None:
     # init command -> kanoa ops init
     init_parser = mlops_subparsers.add_parser(
         "init", help="Initialize kanoa-mlops in a directory"
-    )
-    init_parser.add_argument(
-        "target",
-        choices=["mlops"],
-        help="What to initialize (currently only 'mlops')",
     )
     init_parser.add_argument(
         "--dir",
