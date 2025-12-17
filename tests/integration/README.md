@@ -15,7 +15,7 @@ Two types of benchmarks:
 cd tests/integration
 
 # 1. Start your inference server (e.g., via kanoa)
-kanoa serve vllm olmo3
+kanoa mlops serve vllm olmo3
 
 # 2. Run a single test
 python3 test_vllm_olmo3_specific.py
@@ -292,7 +292,7 @@ When comparing models using the standardized benchmarks:
 
 ```bash
 # 1. Start the server
-kanoa serve vllm olmo3
+kanoa mlops serve vllm olmo3
 
 # 2. Quick validation (tests unique OLMo3 capabilities)
 python3 test_vllm_olmo3_specific.py
@@ -308,12 +308,12 @@ cat benchmark_statistics_olmo3.json
 
 ```bash
 # Benchmark Gemma 3 on text tasks
-kanoa serve vllm gemma3
+kanoa mlops serve vllm gemma3
 MODEL_NAME=gemma-3-12b python3 run_benchmark_suite.py --model text-comparison --runs 5 --output stats_text_gemma3.json
 
 # Switch to OLMo 3
-kanoa down vllm gemma3
-kanoa serve vllm olmo3
+kanoa mlops stop vllm gemma3
+kanoa mlops serve vllm olmo3
 MODEL_NAME=allenai/Olmo-3-7B-Instruct python3 run_benchmark_suite.py --model text-comparison --runs 5 --output stats_text_olmo3.json
 
 # Compare
@@ -324,12 +324,12 @@ diff <(jq '.statistics.overall' stats_text_gemma3.json) <(jq '.statistics.overal
 
 ```bash
 # Benchmark Gemma 3 vision
-kanoa serve vllm gemma3
+kanoa mlops serve vllm gemma3
 MODEL_NAME=gemma-3-12b python3 run_benchmark_suite.py --model vision-comparison --runs 5 --output stats_vision_gemma3.json
 
 # Switch to Molmo
-kanoa down vllm gemma3
-kanoa serve vllm molmo
+kanoa mlops stop vllm gemma3
+kanoa mlops serve vllm molmo
 MODEL_NAME=allenai/Molmo-7B-D-0924 python3 run_benchmark_suite.py --model vision-comparison --runs 5 --output stats_vision_molmo.json
 
 # Molmo is vision-specialized, should outperform in these tests
@@ -348,7 +348,7 @@ MODEL_NAME=allenai/Molmo-7B-D-0924 python3 run_benchmark_suite.py --model vision
 kanoa status
 
 # Start server if needed
-kanoa serve vllm olmo3
+kanoa mlops serve vllm olmo3
 
 # Verify port (should be 8000 for vLLM, 11434 for Ollama)
 curl http://localhost:8000/health  # vLLM

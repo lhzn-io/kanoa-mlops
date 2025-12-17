@@ -152,7 +152,7 @@ For Ollama, no config changes needed — just pull the model:
 
 ```bash
 # Start Ollama
-kanoa serve ollama
+kanoa mlops serve ollama
 
 # Pull a new model
 docker exec kanoa-ollama ollama pull olmo3:32b

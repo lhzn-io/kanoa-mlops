@@ -4,7 +4,7 @@ Plugin for kanoa CLI to manage local MLOps services.
 All operations delegate to docker-compose for single source of truth.
 Supports both:
   1. Development mode (running from cloned repo)
-  2. PyPI install mode (templates copied via `kanoa init mlops`)
+  2. PyPI install mode (templates copied via `kanoa mlops init mlops`)
 """
 
 import json
@@ -339,9 +339,9 @@ def handle_init(args) -> None:
     console.print(f"[green]  vLLM Image: {arch_config.vllm_image}[/green]")
     console.print("")
     console.print("Next steps:")
-    console.print("  kanoa serve             # Interactive service selection")
-    console.print("  kanoa list              # Show available models")
-    console.print("  kanoa status            # Check running services")
+    console.print("  kanoa mlops serve             # Interactive service selection")
+    console.print("  kanoa mlops list              # Show available models")
+    console.print("  kanoa mlops status            # Check running services")
 
 
 def _check_model_cached(model_name: str) -> tuple[bool, str]:
@@ -735,7 +735,7 @@ def handle_serve(args) -> None:
 
     if not mlops_path:
         console.print("[red]Error: kanoa-mlops not initialized.[/red]")
-        console.print("Run: kanoa init mlops --dir ./my-project")
+        console.print("Run: kanoa mlops init mlops --dir ./my-project")
         sys.exit(1)
 
     runtime = getattr(args, "runtime", None)
@@ -806,19 +806,19 @@ def handle_serve(args) -> None:
 
         console.print("[bold]Usage:[/bold]")
         console.print(
-            "  kanoa serve <runtime>                          # Start runtime"
+            "  kanoa mlops serve <runtime>                          # Start runtime"
         )
         console.print(
-            "  kanoa serve vllm <family> --model <id>         # Specific model"
+            "  kanoa mlops serve vllm <family> --model <id>         # Specific model"
         )
         console.print(
-            "  kanoa serve all                                # Start all services"
+            "  kanoa mlops serve all                                # Start all services"
         )
         console.print("")
         console.print("[bold]Examples:[/bold]")
-        console.print("  kanoa serve monitoring")
-        console.print("  kanoa serve ollama")
-        console.print("  kanoa serve vllm gemma3 --model google/gemma-3-12b-it")
+        console.print("  kanoa mlops serve monitoring")
+        console.print("  kanoa mlops serve ollama")
+        console.print("  kanoa mlops serve vllm gemma3 --model google/gemma-3-12b-it")
         return
 
     # Construct service name from runtime and model_family
@@ -842,7 +842,7 @@ def handle_serve(args) -> None:
             else:
                 console.print("[red]Error: model family required for vLLM[/red]")
                 console.print(
-                    "\nUsage: kanoa serve vllm <model-family> [--model <specific-model>]"
+                    "\nUsage: kanoa mlops serve vllm <model-family> [--model <specific-model>]"
                 )
                 console.print("\nAvailable families:")
                 for k in service_map:
@@ -886,9 +886,11 @@ def handle_serve(args) -> None:
             # Non-interactive mode - show error
             family_name = service.replace("vllm-", "")
             console.print(f"[red]Error: --model required for vLLM {family_name}[/red]")
-            console.print(f"\nUsage: kanoa serve vllm {family_name} --model <model-id>")
+            console.print(
+                f"\nUsage: kanoa mlops serve vllm {family_name} --model <model-id>"
+            )
             console.print("\nTo see available cached models, run interactively:")
-            console.print(f"  kanoa serve vllm {family_name}")
+            console.print(f"  kanoa mlops serve vllm {family_name}")
             sys.exit(1)
 
     if model_name:
@@ -954,26 +956,26 @@ def handle_serve(args) -> None:
 
         console.print("[bold]Usage:[/bold]")
         console.print(
-            "  kanoa serve <runtime>                          # Start runtime"
+            "  kanoa mlops serve <runtime>                          # Start runtime"
         )
         console.print(
-            "  kanoa serve vllm <family> --model <id>         # Specific model"
+            "  kanoa mlops serve vllm <family> --model <id>         # Specific model"
         )
         if _is_tty():
             console.print(
-                "  kanoa serve vllm <family>                      # Interactive selection"
+                "  kanoa mlops serve vllm <family>                      # Interactive selection"
             )
         console.print(
-            "  kanoa serve all                                # Start all services"
+            "  kanoa mlops serve all                                # Start all services"
         )
         console.print("")
         console.print("[bold]Examples:[/bold]")
-        console.print("  kanoa serve monitoring")
-        console.print("  kanoa serve ollama")
-        console.print("  kanoa serve vllm gemma3 --model google/gemma-3-12b-it")
+        console.print("  kanoa mlops serve monitoring")
+        console.print("  kanoa mlops serve ollama")
+        console.print("  kanoa mlops serve vllm gemma3 --model google/gemma-3-12b-it")
         if _is_tty():
             console.print(
-                "  kanoa serve vllm molmo  # Shows interactive model selector"
+                "  kanoa mlops serve vllm molmo  # Shows interactive model selector"
             )
         return
 
@@ -1175,7 +1177,7 @@ def handle_stop(args) -> None:
             # Try to be helpful if they typed 'vllm gemma3' but it didn't match
             if service.startswith("vllm-"):
                 console.print(
-                    f"Did you mean: kanoa stop vllm {service.replace('vllm-', '')}?"
+                    f"Did you mean: kanoa mlops stop vllm {service.replace('vllm-', '')}?"
                 )
 
     console.print("[green]✔ Services stopped.[/green]")
@@ -1195,8 +1197,12 @@ def handle_restart(args) -> None:
             for name in service_map:
                 console.print(f"  • {name}")
             console.print("")
-            console.print("Run [bold]kanoa restart <service>[/bold] to restart one.")
-            console.print("Run [bold]kanoa restart all[/bold] to restart everything.")
+            console.print(
+                "Run [bold]kanoa mlops restart <service>[/bold] to restart one."
+            )
+            console.print(
+                "Run [bold]kanoa mlops restart all[/bold] to restart everything."
+            )
         return
 
     # Stop then start
@@ -1250,7 +1256,7 @@ def handle_status(args) -> None:
         console.print(f"[green]✔ Configured path:[/green] {mlops_path}")
     else:
         console.print("[yellow]✘ Not initialized[/yellow]")
-        console.print("  Run: kanoa init mlops --dir ./my-project")
+        console.print("  Run: kanoa mlops init mlops --dir ./my-project")
         return
 
     # Check docker services
@@ -1428,10 +1434,48 @@ def handle_list(args) -> None:
 # =============================================================================
 
 
-def register(parser) -> None:
-    """Register CLI subcommands with the kanoa CLI."""
-    # init command
-    init_parser = parser.add_parser(
+def _handle_mlops_help(args) -> None:
+    """Show mlops-specific help when no subcommand is provided."""
+    console.print("[bold cyan]kanoa mlops[/bold cyan] - MLOps Service Manager\n")
+    console.print("[bold]Usage:[/bold] kanoa mlops <command> [options]\n")
+    console.print("[bold]Available commands:[/bold]")
+    console.print("  init       Initialize kanoa-mlops templates in a directory")
+    console.print("  serve      Start local services (Ollama, vLLM, monitoring)")
+    console.print("  stop       Stop running services")
+    console.print("  restart    Restart services")
+    console.print("  status     Show configuration and service status")
+    console.print("  list       List available services and models")
+    console.print("\n[bold]Examples:[/bold]")
+    console.print("  kanoa mlops init mlops --dir .")
+    console.print("  kanoa mlops serve ollama")
+    console.print("  kanoa mlops serve vllm molmo")
+    console.print("  kanoa mlops status")
+    console.print(
+        "\nRun [bold]kanoa mlops <command> -h[/bold] for command-specific help."
+    )
+
+
+def register(subparsers) -> None:
+    """Register CLI subcommands with the kanoa CLI.
+
+    This function receives the subparsers object from the main kanoa CLI,
+    and should add an 'ops' subcommand with its own subcommands underneath.
+    """
+    # Create the ops subcommand
+    mlops_parser = subparsers.add_parser(
+        "mlops", help="Manage local MLOps services (vLLM, Ollama, monitoring)"
+    )
+
+    # Add subcommands under 'kanoa ops'
+    mlops_subparsers = mlops_parser.add_subparsers(
+        dest="mlops_command", help="MLOps subcommands"
+    )
+
+    # Set default handler for mlops command when no subcommand is provided
+    mlops_parser.set_defaults(func=_handle_mlops_help)
+
+    # init command -> kanoa ops init
+    init_parser = mlops_subparsers.add_parser(
         "init", help="Initialize kanoa-mlops in a directory"
     )
     init_parser.add_argument(
@@ -1454,8 +1498,8 @@ def register(parser) -> None:
     )
     init_parser.set_defaults(func=handle_init)
 
-    # serve command
-    serve_parser = parser.add_parser(
+    # serve command -> kanoa mlops serve
+    serve_parser = mlops_subparsers.add_parser(
         "serve", help="Start local services (Ollama, Monitoring, vLLM)"
     )
     serve_parser.add_argument(
@@ -1483,8 +1527,8 @@ def register(parser) -> None:
     )
     serve_parser.set_defaults(func=handle_serve)
 
-    # stop command
-    stop_parser = parser.add_parser("stop", help="Stop local services")
+    # stop command -> kanoa mlops stop
+    stop_parser = mlops_subparsers.add_parser("stop", help="Stop local services")
     stop_parser.add_argument(
         "service",
         default=None,
@@ -1493,8 +1537,10 @@ def register(parser) -> None:
     )
     stop_parser.set_defaults(func=handle_stop)
 
-    # restart command
-    restart_parser = parser.add_parser("restart", help="Restart local services")
+    # restart command -> kanoa mlops restart
+    restart_parser = mlops_subparsers.add_parser(
+        "restart", help="Restart local services"
+    )
     restart_parser.add_argument(
         "service",
         default=None,
@@ -1503,14 +1549,16 @@ def register(parser) -> None:
     )
     restart_parser.set_defaults(func=handle_restart)
 
-    # status command
-    status_parser = parser.add_parser(
+    # status command -> kanoa mlops status
+    status_parser = mlops_subparsers.add_parser(
         "status", help="Show configuration and running services"
     )
     status_parser.set_defaults(func=handle_status)
 
-    # list command
-    list_parser = parser.add_parser("list", help="List available services and models")
+    # list command -> kanoa ops list
+    list_parser = mlops_subparsers.add_parser(
+        "list", help="List available services and models"
+    )
     list_parser.add_argument(
         "runtime",
         default=None,

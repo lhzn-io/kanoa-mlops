@@ -49,7 +49,7 @@
 
 ### Phase 2 Update: Intelligent Initialization
 
-- **Smart Model Selection**: `kanoa init mlops` will automatically select the largest model from each family that fits the detected hardware architecture.
+- **Smart Model Selection**: `kanoa mlops init mlops` will automatically select the largest model from each family that fits the detected hardware architecture.
 - **Jetson Thor Candidates**:
   - **General**: Llama 4 Maverick (17B)
   - **Reasoning**: Olmo 3 Think (32B)

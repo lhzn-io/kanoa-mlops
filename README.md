@@ -55,10 +55,10 @@ For users adding local AI to a science project:
 pip install kanoa-mlops
 
 # Initialize docker templates in your project
-kanoa init mlops --dir .
+kanoa mlops init --dir .
 
 # Start Ollama
-kanoa serve ollama
+kanoa mlops serve ollama
 
 # Done! Your project now has local AI
 ```
@@ -73,10 +73,10 @@ git clone https://github.com/lhzn-io/kanoa-mlops.git
 cd kanoa-mlops
 
 # Start Ollama (pulls model on first run)
-kanoa serve ollama
+kanoa mlops serve ollama
 
 # Start monitoring (optional)
-kanoa serve monitoring
+kanoa mlops serve monitoring
 ```
 
 ### The Performance Path (vLLM)
@@ -113,7 +113,7 @@ curl http://localhost:8000/health
 
 | Backend | Best For | Hardware | Throughput | Setup |
 | :--- | :--- | :--- | :--- | :--- |
-| **Ollama** | Getting started, CPU/Apple Silicon | Any | ~15 tok/s | `kanoa serve ollama` |
+| **Ollama** | Getting started, CPU/Apple Silicon | Any | ~15 tok/s | `kanoa mlops serve ollama` |
 | **vLLM** | Production, maximum speed | NVIDIA GPU | ~31 tok/s | Docker Compose |
 | **GCP L4** | No local GPU, team sharing | Cloud | ~25 tok/s | Terraform |
 
@@ -122,7 +122,7 @@ curl http://localhost:8000/health
 Perfect for development, VSCode integration, and broader hardware support.
 
 ```bash
-kanoa serve ollama
+kanoa mlops serve ollama
 # → Ollama running at http://localhost:11434
 ```
 
@@ -186,22 +186,22 @@ backend = VLLMBackend(
 
 ```bash
 # Initialize (for pip users)
-kanoa init mlops --dir .  # Scaffold docker templates
+kanoa mlops init --dir .  # Scaffold docker templates
 
 # Start services
-kanoa serve ollama       # Start Ollama
-kanoa serve monitoring   # Start Prometheus + Grafana
-kanoa serve all          # Start everything
+kanoa mlops serve ollama       # Start Ollama
+kanoa mlops serve monitoring   # Start Prometheus + Grafana
+kanoa mlops serve all          # Start everything
 
 # Stop services
-kanoa stop               # Stop all services
-kanoa stop ollama        # Stop specific service
+kanoa mlops stop               # Stop all services
+kanoa mlops stop ollama        # Stop specific service
 
 # Status
-kanoa status             # Show config and running services
+kanoa mlops status             # Show config and running services
 
 # Restart services
-kanoa restart ollama     # Restart Ollama
+kanoa mlops restart ollama     # Restart Ollama
 ```
 
 ## Monitoring Stack
@@ -209,7 +209,7 @@ kanoa restart ollama     # Restart Ollama
 Real-time observability for your inference workloads:
 
 ```bash
-kanoa serve monitoring
+kanoa mlops serve monitoring
 # → Grafana:    http://localhost:3000 (admin/admin)
 # → Prometheus: http://localhost:9090
 ```

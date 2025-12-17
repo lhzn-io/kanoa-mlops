@@ -20,36 +20,36 @@ pip install -e .
 
 ```bash
 # // turbo
-kanoa serve all         # Start all services
+kanoa mlops serve all         # Start all services
 
 # // turbo
-kanoa serve ollama      # Start Ollama only
+kanoa mlops serve ollama      # Start Ollama only
 
 # // turbo
-kanoa serve monitoring  # Start Monitoring only
+kanoa mlops serve monitoring  # Start Monitoring only
 ```
 
 ### Stop Services
 
 ```bash
 # // turbo
-kanoa stop              # Stop all services
+kanoa mlops stop              # Stop all services
 
 # // turbo
-kanoa stop ollama       # Stop Ollama only
+kanoa mlops stop ollama       # Stop Ollama only
 
 # // turbo
-kanoa stop monitoring   # Stop Monitoring only
+kanoa mlops stop monitoring   # Stop Monitoring only
 ```
 
 ### Restart Services
 
 ```bash
 # // turbo
-kanoa restart ollama      # Restart Ollama
+kanoa mlops restart ollama      # Restart Ollama
 
 # // turbo
-kanoa restart monitoring  # Restart Monitoring
+kanoa mlops restart monitoring  # Restart Monitoring
 ```
 
 ## Using Make Targets
@@ -88,7 +88,7 @@ CLI (kanoa)          Makefile           Docker Compose
     │                    │                    │
     └──► delegates ──►   │   ──► executes ──► │
                          │                    │
-  kanoa serve ollama     │                    │
+  kanoa mlops serve ollama     │                    │
          │               │                    │
          └───────►  make serve-ollama         │
                          │                    │

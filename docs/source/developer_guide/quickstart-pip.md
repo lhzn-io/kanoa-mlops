@@ -33,7 +33,7 @@ Scaffold the docker templates into your project:
 
 ```bash
 cd your-project/
-kanoa init mlops --dir .
+kanoa mlops init mlops --dir .
 ```
 
 This creates:
@@ -50,7 +50,7 @@ your-project/
 ### Ollama (Easiest)
 
 ```bash
-kanoa serve ollama
+kanoa mlops serve ollama
 # → Ollama running at http://localhost:11434
 ```
 
@@ -80,7 +80,7 @@ print(result.text)
 ## Monitoring (Optional)
 
 ```bash
-kanoa serve monitoring
+kanoa mlops serve monitoring
 # → Grafana: http://localhost:3000 (admin/admin)
 # → Prometheus: http://localhost:9090
 ```
@@ -89,9 +89,9 @@ kanoa serve monitoring
 
 | Command | Description |
 |---------|-------------|
-| `kanoa init mlops --dir .` | Scaffold docker templates |
-| `kanoa serve ollama` | Start Ollama server |
-| `kanoa serve monitoring` | Start monitoring stack |
+| `kanoa mlops init mlops --dir .` | Scaffold docker templates |
+| `kanoa mlops serve ollama` | Start Ollama server |
+| `kanoa mlops serve monitoring` | Start monitoring stack |
 | `kanoa stop` | Stop all services |
 | `kanoa status` | Show config and service status |
 
@@ -105,7 +105,7 @@ kanoa serve monitoring
 
 ### "kanoa-mlops not initialized"
 
-Run `kanoa init mlops --dir .` first.
+Run `kanoa mlops init mlops --dir .` first.
 
 ### Docker GPU not detected
 
