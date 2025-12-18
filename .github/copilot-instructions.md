@@ -5,15 +5,21 @@ description: Consult the GitHub Copilot instructions for project-specific guidel
 
 For detailed persona, commands, and boundaries, consult [agents.md](../agents.md).
 
+## Core Directives
+
+0.  **Conda Environment**:
+    *   **ALWAYS** use the correct conda environment for the repository you are working in.
+    *   For `kanoa-mlops`: Use `conda run -n kanoa-mlops` for all Python commands, or activate with `conda activate kanoa-mlops` first.
+    *   **NEVER** run Python/pip/pytest commands in the base environment or without the correct environment.
+    *   Examples:
+        *   `conda run -n kanoa-mlops python script.py`
+        *   `conda run -n kanoa-mlops pytest tests/`
+        *   `conda run -n kanoa-mlops pip install package`
+
 ## Project Context
 
 `kanoa-mlops` is the infrastructure companion to the `kanoa` library.
 It provides the "brawn" (compute, storage, serving) for local AI interpretation.
-
-## Setup
-
-- **Environment**: Always activate the environment with `conda activate kanoa-mlops` before running commands.
-- **Terminal**: When running commands, ensure you are in the `kanoa-mlops` conda environment. If a new terminal is opened, run `conda activate kanoa-mlops` immediately.
 
 ## Core Technologies
 
