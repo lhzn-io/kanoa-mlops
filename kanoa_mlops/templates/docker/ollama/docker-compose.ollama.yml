@@ -2,6 +2,7 @@ services:
   ollama:
     image: ollama/ollama:latest
     container_name: kanoa-ollama
+    runtime: nvidia
     ports:
       - "11434:11434"
     volumes:
@@ -14,7 +15,6 @@ services:
             - driver: nvidia
               count: 1
               capabilities: [gpu]
-    restart: unless-stopped
 
   ollama-exporter:
     build:
@@ -28,7 +28,6 @@ services:
       - SCRAPE_INTERVAL=15
     depends_on:
       - ollama
-    restart: unless-stopped
 
 volumes:
   ollama:

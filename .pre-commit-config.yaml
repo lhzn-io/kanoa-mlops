@@ -50,19 +50,22 @@ repos:
         stages: [pre-commit]
 
   # Type checking
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.19.0
+  - repo: local
     hooks:
       - id: mypy
+        name: mypy
+        entry: bash -c 'conda run -n kanoa-mlops mypy "$@"' --
         language: system
+        types: [python]
         files: ^(kanoa_mlops|tests)/
+        require_serial: true
 
   # Unit Tests
   - repo: local
     hooks:
       - id: pytest
         name: pytest
-        entry: env PYTHONPATH=. pytest tests/unit
+        entry: bash -c 'conda run -n kanoa-mlops env PYTHONPATH=. pytest tests/unit'
         language: system
         types: [python]
         pass_filenames: false

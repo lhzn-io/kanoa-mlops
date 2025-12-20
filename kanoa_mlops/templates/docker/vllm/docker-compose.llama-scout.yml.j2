@@ -1,13 +1,17 @@
 services:
-  vllm-olmo3:
+  vllm-llama-scout:
 {% if arch_config.platform_name == "jetson-thor" %}
-    # Jetson Thor: Use pre-built NVIDIA image with sm_110 support
+    # ⚠️ Thor Limitation: This config works but OOMs on 64GB without quantization
+    # Thor vLLM image doesn't support bitsandbytes for Scout architecture
+    # Recommended: Use Ollama with Q4 Scout instead:
+    #   kanoa mlops serve ollama
+    #   docker exec kanoa-ollama ollama pull ingu627/llama4-scout-q4:109b
     image: {{ arch_config.vllm_image }}
 {% else %}
-    # x86_64 or Jetson Orin: Use official vLLM image
-    image: vllm/vllm-openai:latest
+    # x86_64 or Jetson Orin: Use official vLLM image with quantization
+    image: vllm/vllm-openai:v0.6.3.post1
 {% endif %}
-    container_name: kanoa-vllm-olmo3
+    container_name: kanoa-vllm-llama-scout
     runtime: nvidia
     ports:
       - "8000:8000" # Standard vLLM port
@@ -25,17 +29,21 @@ services:
       - HF_HUB_OFFLINE=${HF_HUB_OFFLINE:-0}
     command: >
       vllm serve
-      --model ${MODEL_NAME:-allenai/Olmo-3-7B-Think}
+      --model ${MODEL_NAME:-meta-llama/Llama-4-Scout-17B-16E-Instruct}
       --host 0.0.0.0
       --port 8000
-      --served-model-name ${SERVED_MODEL_NAME:-allenai/Olmo-3-7B-Think}
+      --served-model-name ${SERVED_MODEL_NAME:-meta-llama/Llama-4-Scout-17B-16E-Instruct}
       --trust-remote-code
-      --max-model-len 32768
-      --max-num-seqs 5
-      --gpu-memory-utilization 0.6
+      --max-model-len 8192
+      --max-num-seqs 2
+      --gpu-memory-utilization 0.5
       --kv-cache-dtype fp8
       --enable-chunked-prefill
+{% if arch_config.platform_name != "jetson-thor" %}
       --dtype bfloat16
+      --quantization bitsandbytes
+      --load-format bitsandbytes
+{% endif %}
     deploy:
       resources:
         reservations:

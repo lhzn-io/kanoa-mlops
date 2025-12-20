@@ -25,6 +25,7 @@ requirements-local.txt
 !.vscode/launch.json
 .idea/
 .claude/
+.gemini/
 *.swp
 *.swo
 *~

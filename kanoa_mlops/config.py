@@ -16,7 +16,7 @@ DEFAULT_CONFIG = {
 def load_config() -> dict[str, Any]:
     """Load user configuration from ~/.config/kanoa/mlops.toml."""
     if CONFIG_FILE.exists():
-        return toml.load(CONFIG_FILE)
+        return dict(toml.load(CONFIG_FILE))
     return DEFAULT_CONFIG.copy()
 
 
