@@ -19,6 +19,8 @@ from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from rich.console import Console
+from rich.prompt import Prompt
+from rich.table import Table
 
 from kanoa_mlops.arch_detect import detect_architecture
 from kanoa_mlops.config import get_mlops_path, get_templates_path, set_mlops_path
@@ -396,8 +398,12 @@ def _list_cached_models() -> list[dict]:
         # Check completion status
         is_complete, status = _check_model_cached(model_name)
 
-        # Calculate approximate size
-        size_bytes = sum(f.stat().st_size for f in model_dir.rglob("*") if f.is_file())
+        # Calculate approximate size (excluding symlinks to avoid double-counting)
+        size_bytes = sum(
+            f.stat().st_size
+            for f in model_dir.rglob("*")
+            if f.is_file() and not f.is_symlink()
+        )
         size_gb = size_bytes / (1024**3)
 
         models.append(
@@ -612,6 +618,8 @@ def _select_vllm_family_interactive(service_map: dict) -> str | None:
         "olmo3": "Allen AI OLMo 3 (text)",
         "gemma3": "Google Gemma 3 (multimodal)",
         "molmo": "Allen AI Molmo (multimodal vision)",
+        "llama-scout": "Meta Llama 4 Scout 17B MoE (16 experts)",
+        "scout": "Meta Llama 4 Scout 17B MoE (Ollama)",
     }
 
     for idx, family in enumerate(sorted(vllm_families), 1):
@@ -651,6 +659,8 @@ def _select_model_interactive(family: str | None = None) -> str | None:
             "gemma3": ["google/gemma-3", "google/gemma3"],
             "molmo": ["allenai/molmo", "allenai/Molmo"],
             "olmo3": ["allenai/olmo-3", "allenai/Olmo-3"],
+            "llama-scout": ["meta-llama/llama-4-scout", "meta-llama/Llama-4-Scout"],
+            "scout": ["scout", "Scout"],  # For Ollama models
         }
         patterns = family_patterns.get(family.lower(), [])
         if patterns:
@@ -672,6 +682,10 @@ def _select_model_interactive(family: str | None = None) -> str | None:
                 console.print("  [bold]hf download allenai/Molmo-7B-D-0924[/bold]")
             elif family == "olmo3":
                 console.print("  [bold]hf download allenai/Olmo-3-7B-Think[/bold]")
+            elif family == "llama-scout":
+                console.print(
+                    "  [bold]hf download meta-llama/Llama-4-Scout-17B-16E-Instruct[/bold]"
+                )
         else:
             console.print(
                 "[yellow]No cached models found in ~/.cache/huggingface/hub[/yellow]"
@@ -829,6 +843,38 @@ def handle_serve(args) -> None:
     elif runtime == "ollama":
         # Ollama manages its own models
         service = "ollama"
+        model_family = getattr(args, "model_family", None)
+
+        # Handle model selection if family specified
+        if model_family:
+            if _is_tty():
+                console.print(
+                    f"[cyan]Selecting {model_family} model from Ollama...[/cyan]"
+                )
+                console.print("")
+                selected_model = _select_ollama_model_interactive(family=model_family)
+                if selected_model:
+                    console.print(f"\n[green]Selected: {selected_model}[/green]")
+
+                    # Check if Ollama is already running
+                    if _is_service_running("ollama"):
+                        console.print("\n[green]Ollama already running[/green]")
+                    else:
+                        console.print("\n[cyan]Starting Ollama...[/cyan]")
+
+                    console.print(
+                        f"\nLoad the model with:\n  [bold]docker exec kanoa-ollama ollama run {selected_model}[/bold]\n"
+                    )
+                else:
+                    console.print(
+                        "[yellow]No model selected, starting Ollama server only.[/yellow]"
+                    )
+            else:
+                console.print(
+                    f"[yellow]Model family '{model_family}' specified but running non-interactively.[/yellow]"
+                )
+                console.print("\nList Ollama models with:")
+                console.print("  [bold]docker exec kanoa-ollama ollama list[/bold]")
     elif runtime == "vllm":
         # vLLM requires a model family
         if not model_family:
@@ -1022,7 +1068,13 @@ def handle_serve(args) -> None:
             sys.exit(1)
 
         compose_file = compose_file_opt  # Now narrowed to Path
-        console.print(f"[blue]Starting {service}...[/blue]")
+
+        # Check if service is already running
+        if _is_service_running(service):
+            console.print(f"[green]{service} already running[/green]")
+        else:
+            console.print(f"[blue]Starting {service}...[/blue]")
+
         # Auto-build missing images for this service before starting
         images = _parse_images_from_compose(compose_file)
         missing = [img for img in images if not _image_exists(img)]
@@ -1083,6 +1135,27 @@ def _get_running_services(service_map: dict) -> list[str]:
         pass
 
     return sorted(running)
+
+
+def _is_service_running(service: str) -> bool:
+    """Check if a specific service is currently running."""
+    try:
+        result = subprocess.run(
+            [
+                "docker",
+                "ps",
+                "--format",
+                "{{.Names}}",
+                "--filter",
+                f"name=kanoa-{service}",
+            ],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        return bool(result.stdout.strip())
+    except FileNotFoundError:
+        return False
 
 
 def handle_stop(args) -> None:
@@ -1305,6 +1378,29 @@ def handle_status(args) -> None:
         ollama_url = "http://localhost:11434/"
         if _check_url(ollama_url):
             console.print(f"  [green]✔ Ollama API[/green]     {ollama_url}")
+
+            # Show loaded models
+            try:
+                result = subprocess.run(
+                    ["docker", "exec", "kanoa-ollama", "ollama", "list"],
+                    check=False,
+                    capture_output=True,
+                    text=True,
+                    timeout=5,
+                )
+                if result.returncode == 0 and result.stdout.strip():
+                    lines = result.stdout.strip().split("\n")
+                    if len(lines) > 1:  # Has models beyond header
+                        console.print("\n  [bold cyan]Ollama Models:[/bold cyan]")
+                        # Show just model names (first column)
+                        for line in lines[1:]:
+                            parts = line.split()
+                            if parts:
+                                model_name = parts[0]
+                                size = parts[2] if len(parts) > 2 else "?"
+                                console.print(f"    • {model_name:40} ({size})")
+            except (subprocess.TimeoutExpired, FileNotFoundError):
+                pass
         else:
             console.print(f"  [dim]✘ Ollama API[/dim]     {ollama_url} (Unreachable)")
 

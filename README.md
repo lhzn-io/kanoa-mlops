@@ -94,6 +94,13 @@ docker compose -f docker/vllm/docker-compose.molmo.yml up -d
 curl http://localhost:8000/health
 ```
 
+## Platform Guidance
+
+- **x86/CUDA GPUs** (RTX 4090, 5080, etc.): Use vLLM for best performance
+- **Jetson Thor/ARM64**: Use Ollama for Scout (vLLM Thor image lacks bitsandbytes quantization)
+- **Easy Setup**: Ollama handles quantization automatically (65GB Q4 vs 203GB full)
+- **Production**: vLLM offers more control over inference parameters
+
 #### Advanced Models
 
 For the Olmo3 32B Think model (requires significant GPU memory):

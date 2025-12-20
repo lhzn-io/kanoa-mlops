@@ -1,42 +1,44 @@
 services:
-  vllm-molmo:
-    build:
-      context: .
-      dockerfile: Dockerfile.molmo
-      args:
-        BASE_IMAGE: {{ arch_config.vllm_image }}
-    image: kanoa-vllm-molmo:{{ arch_config.platform_name }}
-    container_name: kanoa-vllm-molmo
+  vllm-mixtral:
+{% if arch_config.platform_name == "jetson-thor" %}
+    # Jetson Thor: Use pre-built NVIDIA image with Blackwell sm_110 support
+    image: {{ arch_config.vllm_image }}
+{% else %}
+    # x86_64 or Jetson Orin: Use official vLLM image
+    image: vllm/vllm-openai:v0.6.3.post1
+{% endif %}
+    container_name: kanoa-vllm-mixtral
     runtime: nvidia
     ports:
-      - "8000:8000"
+      - "8001:8000" # Different port to avoid conflict with other vLLM instance
     volumes:
       - ${HF_HOME:-~/.cache/huggingface}:/root/.cache/huggingface:rw
     environment:
       - CUDA_VISIBLE_DEVICES=0
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=all
       - HF_HOME=/root/.cache/huggingface
       - HUGGINGFACE_HUB_CACHE=/root/.cache/huggingface/hub
       - TRANSFORMERS_CACHE=/root/.cache/huggingface
-      - TF_FORCE_GPU_ALLOW_GROWTH=true
-      - TF_CPP_MIN_LOG_LEVEL=3
       - TRANSFORMERS_VERBOSITY=info
       - HF_HUB_VERBOSITY=info
       - HF_HUB_OFFLINE=${HF_HUB_OFFLINE:-0}
     command: >
       vllm serve
-      --model ${MODEL_NAME:-allenai/Molmo-7B-D-0924}
+      --model ${MODEL_NAME:-mistralai/Mixtral-8x7B-Instruct-v0.1}
       --host 0.0.0.0
       --port 8000
-      --served-model-name ${SERVED_MODEL_NAME:-allenai/Molmo-7B-D-0924}
+      --served-model-name ${SERVED_MODEL_NAME:-mistralai/Mixtral-8x7B-Instruct-v0.1}
       --trust-remote-code
-{% if arch_config.platform_name != "jetson-thor" %}
-      --quantization bitsandbytes
-      --load-format bitsandbytes
-{% endif %}
-      --max-num-seqs 5
-      --gpu-memory-utilization 0.8
+      --max-model-len 32768
+      --max-num-seqs 3
+      --gpu-memory-utilization 0.7
       --kv-cache-dtype fp8
       --enable-chunked-prefill
+{% if arch_config.platform_name != "jetson-thor" %}
+      --dtype bfloat16
+{% endif %}
+      --tensor-parallel-size 1
     deploy:
       resources:
         reservations:
