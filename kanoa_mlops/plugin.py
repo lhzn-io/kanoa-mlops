@@ -1456,30 +1456,6 @@ def handle_status(args) -> None:
         ollama_url = "http://localhost:11434/"
         if _check_url(ollama_url):
             console.print(f"  [green]✔ Ollama API[/green]     {ollama_url}")
-
-            # Show loaded models
-            try:
-                result = subprocess.run(
-                    ["docker", "exec", "kanoa-ollama", "ollama", "list"],
-                    check=False,
-                    capture_output=True,
-                    text=True,
-                    timeout=5,
-                )
-                if result.returncode == 0 and result.stdout.strip():
-                    lines = result.stdout.strip().split("\n")
-                    if len(lines) > 1:  # Has models beyond header
-                        console.print("\n  [bold cyan]Ollama Models:[/bold cyan]")
-                        # Show just model names (first column)
-                        for line in lines[1:]:
-                            parts = line.split()
-                            if parts:
-                                model_name = parts[0]
-                                # Size is third column in ollama list output
-                                size = parts[2] if len(parts) > 2 else "?"  # noqa: PLR2004
-                                console.print(f"    • {model_name:40} ({size})")
-            except (subprocess.TimeoutExpired, FileNotFoundError):
-                pass
         else:
             console.print(f"  [dim]✘ Ollama API[/dim]     {ollama_url} (Unreachable)")
 
