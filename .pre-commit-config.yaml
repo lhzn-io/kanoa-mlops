@@ -54,7 +54,7 @@ repos:
     hooks:
       - id: mypy
         name: mypy
-        entry: bash -c 'conda run -n kanoa-mlops mypy "$@"' --
+        entry: mypy
         language: system
         types: [python]
         files: ^(kanoa_mlops|tests)/
@@ -65,7 +65,7 @@ repos:
     hooks:
       - id: pytest
         name: pytest
-        entry: bash -c 'conda run -n kanoa-mlops env PYTHONPATH=. pytest tests/unit'
+        entry: bash -c 'env PYTHONPATH=. pytest tests/unit'
         language: system
         types: [python]
         pass_filenames: false
