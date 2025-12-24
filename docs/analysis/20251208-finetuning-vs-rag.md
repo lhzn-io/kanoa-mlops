@@ -2,7 +2,7 @@
 
 **Date**: December 11, 2025
 **Status**: Draft
-**Author**: Kanoa MLOps Agent
+**Author**: kanoa-mlops Agent
 
 ## Executive Summary
 

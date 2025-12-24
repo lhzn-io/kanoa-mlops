@@ -1,13 +1,13 @@
 
 # Analysis: Frontier Models on NVIDIA Jetson Thor
+
 **Date**: December 8, 2025
 **Status**: Draft
-**Author**: Kanoa MLOps Agent
+**Author**: kanoa-mlops Agent
 
 ## 1. Executive Summary
 
 The NVIDIA Jetson Thor (Blackwell architecture, 128GB Unified Memory) represents a paradigm shift for edge AI. This document analyzes the feasibility of running the "2025 Class" of frontier open models—specifically **Olmo 3**, **Gemma 3**, **Molmo**, **Llama 4**, and **Ministral 3**—on this hardware.
-
 
 ---
 
@@ -75,8 +75,8 @@ We recommend running **Molmo 72B in 4-bit (AWQ/GPTQ)** or **8-bit (FP8)**. This 
 
 The Llama 4 release marks a significant shift towards "natively multimodal" architectures. Unlike previous generations where vision was an adapter, Llama 4 integrates it at the core.
 
-*   **Scout (17B)**: Designed for high-speed analysis with 16 experts.
-*   **Maverick (17B)**: A "dense-like" MoE with 128 experts, offering higher reasoning capabilities at a similar memory footprint.
+- **Scout (17B)**: Designed for high-speed analysis with 16 experts.
+- **Maverick (17B)**: A "dense-like" MoE with 128 experts, offering higher reasoning capabilities at a similar memory footprint.
 
 ### Suitability for Thor (Llama 4)
 
@@ -120,11 +120,11 @@ Mistral's answer to the edge compute revolution. At 14B parameters, it is the mo
 
 The "2025 Class" of AI models is defined by a shift away from massive monolithic dense models towards **specialized, efficient architectures** (MoE, Multimodal-Native) that fit on high-end edge hardware.
 
-For the **Kanoa** project on Jetson Thor, we propose evaluating the following configuration:
+For the **kanoa** project on Jetson Thor, we propose evaluating the following configuration:
 
-1.  **General**: **Llama 4 Maverick (17B)** or **Gemma 3 (27B)** for general interaction and multimodal understanding.
-2.  **Reasoning**: **Olmo 3 (32B)** loaded on-demand for complex reasoning tasks.
-3.  **Vision**: **Molmo (72B)** (Quantized) for high-fidelity scientific image analysis.
+1. **General**: **Llama 4 Maverick (17B)** or **Gemma 3 (27B)** for general interaction and multimodal understanding.
+2. **Reasoning**: **Olmo 3 (32B)** loaded on-demand for complex reasoning tasks.
+3. **Vision**: **Molmo (72B)** (Quantized) for high-fidelity scientific image analysis.
 
 ### Next Steps
 
