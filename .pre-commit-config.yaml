@@ -59,14 +59,3 @@ repos:
         types: [python]
         files: ^(kanoa_mlops|tests)/
         require_serial: true
-
-  # Unit Tests
-  - repo: local
-    hooks:
-      - id: pytest
-        name: pytest
-        entry: bash -c 'env PYTHONPATH=. pytest tests/unit'
-        language: system
-        types: [python]
-        pass_filenames: false
-        always_run: true

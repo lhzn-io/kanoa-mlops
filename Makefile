@@ -109,8 +109,8 @@ test:
 	else \
 		echo "  terraform not found - skipping"; \
 	fi
-	@echo "Running integration tests..."
-	@python3 tests/integration/test_molmo_vision.py
+	@echo "Running unit tests..."
+	@conda run -n kanoa-mlops pytest tests/unit -v
 
 gpu-probe:
 	@echo "Probing for NVIDIA GPUs..."
