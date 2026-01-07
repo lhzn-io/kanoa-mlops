@@ -615,6 +615,7 @@ def _select_service_interactive(service_map: dict) -> str | None:
     # Categorize services
     infrastructure: list[str] = []
     ml_runtimes: list[str] = []
+    agent_platforms: list[str] = []
     vllm_families: list[str] = []
 
     for name in service_map:
@@ -622,6 +623,8 @@ def _select_service_interactive(service_map: dict) -> str | None:
             infrastructure.append(name)
         elif name == "ollama":
             ml_runtimes.append(name)
+        elif name == "openhands":
+            agent_platforms.append(name)
         elif name.startswith("vllm-"):
             vllm_families.append(name.replace("vllm-", ""))
 
@@ -636,6 +639,12 @@ def _select_service_interactive(service_map: dict) -> str | None:
     if infrastructure:
         for svc in infrastructure:
             table.add_row(str(idx), svc, "infrastructure")
+            choices.append((idx, svc))
+            idx += 1
+
+    if agent_platforms:
+        for svc in agent_platforms:
+            table.add_row(str(idx), svc, "agent platform")
             choices.append((idx, svc))
             idx += 1
 
@@ -852,6 +861,7 @@ def handle_serve(args) -> None:
         infrastructure = []
         vllm_families = []
         ml_runtimes = []
+        agent_platforms = []
 
         for name in service_map:
             if name == "monitoring":
@@ -860,6 +870,8 @@ def handle_serve(args) -> None:
                 vllm_families.append(name.replace("vllm-", ""))
             elif name == "ollama":
                 ml_runtimes.append(name)
+            elif name == "openhands":
+                agent_platforms.append(name)
             else:
                 # Fallback for unknown services
                 ml_runtimes.append(name)
@@ -870,6 +882,11 @@ def handle_serve(args) -> None:
         if infrastructure:
             console.print("[bold]Infrastructure:[/bold]")
             console.print("  • monitoring      - Prometheus + Grafana")
+            console.print("")
+
+        if agent_platforms:
+            console.print("[bold]Agent Platforms:[/bold]")
+            console.print("  • openhands       - OpenHands (AI Software Engineer)")
             console.print("")
 
         if ml_runtimes or vllm_families:
@@ -935,14 +952,31 @@ def handle_serve(args) -> None:
                     console.print(f"\n[green]Selected: {selected_model}[/green]")
 
                     # Check if Ollama is already running
-                    if _is_service_running("ollama"):
-                        console.print("\n[green]Ollama already running[/green]")
-                    else:
-                        console.print("\n[cyan]Starting Ollama...[/cyan]")
-
-                    console.print(
-                        f"\nLoad the model with:\n  [bold]docker exec kanoa-ollama ollama run {selected_model}[/bold]\n"
+                    is_container = _is_service_running("ollama")
+                    is_native = not is_container and _check_url(
+                        "http://localhost:11434"
                     )
+
+                    if is_container:
+                        console.print(
+                            "\n[green]Ollama already running (Docker)[/green]"
+                        )
+                        console.print(
+                            f"\nLoad the model with:\n  [bold]docker exec kanoa-ollama ollama run {selected_model}[/bold]\n"
+                        )
+                    elif is_native:
+                        console.print(
+                            "\n[green]Ollama already running (Native)[/green]"
+                        )
+                        console.print(
+                            f"\nLoad the model with:\n  [bold]ollama run {selected_model}[/bold]\n"
+                        )
+                    else:
+                        console.print("\n[cyan]Starting Ollama (Docker)...[/cyan]")
+                        # ... fallback to normal docker start ...
+                        console.print(
+                            f"\nLoad the model with:\n  [bold]docker exec kanoa-ollama ollama run {selected_model}[/bold]\n"
+                        )
                 else:
                     console.print(
                         "[yellow]No model selected, starting Ollama server only.[/yellow]"
@@ -1034,6 +1068,7 @@ def handle_serve(args) -> None:
         infrastructure = []
         vllm_families = []
         ml_runtimes = []
+        agent_platforms = []
 
         for name in service_map:
             if name == "monitoring":
@@ -1042,6 +1077,8 @@ def handle_serve(args) -> None:
                 vllm_families.append(name.replace("vllm-", ""))
             elif name == "ollama":
                 ml_runtimes.append(name)
+            elif name == "openhands":
+                agent_platforms.append(name)
             else:
                 # Fallback for unknown services
                 ml_runtimes.append(name)
@@ -1052,6 +1089,11 @@ def handle_serve(args) -> None:
         if infrastructure:
             console.print("[bold]Infrastructure:[/bold]")
             console.print("  • monitoring      - Prometheus + Grafana")
+            console.print("")
+
+        if agent_platforms:
+            console.print("[bold]Agent Platforms:[/bold]")
+            console.print("  • openhands       - OpenHands (AI Software Engineer)")
             console.print("")
 
         if ml_runtimes or vllm_families:
@@ -1370,6 +1412,7 @@ def get_initialized_services(mlops_path: Path) -> dict[str, Path]:
     candidates = {
         "ollama": docker_dir / "ollama" / "docker-compose.ollama.yml",
         "monitoring": docker_dir / "monitoring" / "docker-compose.yml",
+        "openhands": docker_dir / "openhands" / "docker-compose.yml",
     }
 
     # Check vLLM templates if present
@@ -1416,6 +1459,7 @@ def handle_status(args) -> None:
 
     ollama_running = False
     vllm_running = False
+    openhands_running = False
     has_running = False
 
     try:
@@ -1436,6 +1480,8 @@ def handle_status(args) -> None:
                         ollama_running = True
                     if "vllm" in line.lower():
                         vllm_running = True
+                    if "openhands" in line.lower():
+                        openhands_running = True
 
         if not has_running:
             console.print("  [dim]No kanoa services running[/dim]")
@@ -1447,17 +1493,29 @@ def handle_status(args) -> None:
     console.print("")
     console.print("[bold]Service Endpoints:[/bold]")
 
+    # Check native services if no docker services found
     if not has_running:
+        # Check native Ollama
+        if _check_url("http://localhost:11434/"):
+            console.print(
+                "  [green]✔ Ollama API (Native)[/green]     http://localhost:11434/"
+            )
+            return
+
         console.print("  [dim]No active services to check[/dim]")
         return
 
     # Ollama
+    ollama_url = "http://localhost:11434/"
     if ollama_running:
-        ollama_url = "http://localhost:11434/"
         if _check_url(ollama_url):
-            console.print(f"  [green]✔ Ollama API[/green]     {ollama_url}")
+            console.print(f"  [green]✔ Ollama API (Docker)[/green]     {ollama_url}")
         else:
-            console.print(f"  [dim]✘ Ollama API[/dim]     {ollama_url} (Unreachable)")
+            console.print(
+                f"  [dim]✘ Ollama API (Docker)[/dim]     {ollama_url} (Unreachable)"
+            )
+    elif _check_url(ollama_url):
+        console.print(f"  [green]✔ Ollama API (Native)[/green]     {ollama_url}")
 
     # vLLM
     if vllm_running:
@@ -1468,6 +1526,14 @@ def handle_status(args) -> None:
             console.print(
                 "  [dim]✘ vLLM API[/dim]       http://localhost:8000 (Unreachable)"
             )
+
+    # OpenHands
+    if openhands_running:
+        oh_url = "http://localhost:3000/"
+        if _check_url(oh_url):
+            console.print(f"  [green]✔ OpenHands[/green]        {oh_url}")
+        else:
+            console.print(f"  [dim]✘ OpenHands[/dim]        {oh_url} (Unreachable)")
 
 
 def handle_list(args) -> None:
