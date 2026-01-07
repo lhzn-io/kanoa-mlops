@@ -11,6 +11,7 @@ import json
 import os
 import re
 import shutil
+import signal
 import subprocess
 import sys
 import urllib.error
@@ -467,6 +468,54 @@ def _list_ollama_models() -> list[dict]:
     return sorted(models, key=lambda x: x["name"])
 
 
+def _select_ollama_family_interactive() -> str | None:
+    """
+    Show interactive menu to select an Ollama model family.
+
+    Returns:
+        Selected family name, "ALL" for all models, or None on cancel.
+    """
+    families = {
+        "gemma3": "Google Gemma 3 (multimodal)",
+        "llama3": "Meta Llama 3 (text)",
+        "phi": "Microsoft Phi (efficient text)",
+        "qwen": "Alibaba Qwen (coding/text)",
+        "scout": "Meta Llama 4 Scout (17B MoE)",
+    }
+
+    table = Table(title="Ollama Model Families")
+    table.add_column("#", style="cyan", width=4)
+    table.add_column("Family", style="green")
+    table.add_column("Description", style="blue")
+
+    sorted_families = sorted(families.keys())
+    for idx, fam in enumerate(sorted_families, 1):
+        table.add_row(str(idx), fam, families[fam])
+
+    # Add 'All Models' option
+    all_idx = len(sorted_families) + 1
+    table.add_row(str(all_idx), "ALL", "List all available models")
+
+    console.print(table)
+
+    choice = str(
+        Prompt.ask(
+            "Select family",
+            choices=[str(i) for i in range(1, len(sorted_families) + 2)] + ["q"],
+            default="q",
+        )
+    )
+
+    if choice == "q":
+        return None
+
+    choice_idx = int(choice)
+    if choice_idx == all_idx:
+        return "ALL"
+
+    return sorted_families[choice_idx - 1]
+
+
 def _select_ollama_model_interactive(family: str | None = None) -> str | None:
     """
     Show interactive menu to select an Ollama model.
@@ -814,6 +863,63 @@ def _select_model_interactive(family: str | None = None) -> str | None:
     return None
 
 
+def _check_ollama_process_env() -> list[str]:
+    """
+    Check if the running Ollama process (native) has optimal environment variables.
+    Returns a list of missing/incorrect settings messages.
+    """
+    # Only meaningful on macOS/Linux where we can inspect process env
+    if sys.platform == "win32":
+        return []
+
+    try:
+        # Find pid of 'ollama serve'
+        # pgrep -f "ollama serve"
+        pgrep = subprocess.run(
+            ["pgrep", "-f", "ollama serve"],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        if pgrep.returncode != 0 or not pgrep.stdout.strip():
+            return []
+
+        # There might be multiple pids (parent/child), just take the first one
+        pid = pgrep.stdout.strip().splitlines()[0].split()[0]
+
+        # Get environment variables
+        # ps eww <pid>
+        ps = subprocess.run(
+            ["ps", "eww", pid],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        if ps.returncode != 0:
+            return []
+
+        output = ps.stdout
+
+        warnings = []
+
+        # Check OLLAMA_NUM_CTX
+        if "OLLAMA_NUM_CTX=" not in output:
+            warnings.append(
+                "• OLLAMA_NUM_CTX is not set (defaults to 4096). Agents like OpenHands need 32768."
+            )
+
+        # Check OLLAMA_MAX_LOADED_MODELS
+        if "OLLAMA_MAX_LOADED_MODELS=" not in output:
+            warnings.append(
+                "• OLLAMA_MAX_LOADED_MODELS is not set. Using 2 is recommended for agent workflows."
+            )
+
+        return warnings
+
+    except Exception:
+        return []
+
+
 def handle_serve(args) -> None:
     """Handle the 'serve' command by starting docker-compose services."""
     mlops_path = resolve_mlops_path()
@@ -821,10 +927,6 @@ def handle_serve(args) -> None:
     if not mlops_path:
         console.print("[red]Error: kanoa-mlops not initialized.[/red]")
         console.print("Run: kanoa mlops init --dir ./my-project")
-        sys.exit(1)
-
-    # Check docker availability early
-    if not _ensure_docker_available(interactive=True):
         sys.exit(1)
 
     runtime = getattr(args, "runtime", None)
@@ -928,33 +1030,65 @@ def handle_serve(args) -> None:
         is_container = _is_service_running("ollama")
         is_native = not is_container and _check_url("http://localhost:11434")
 
+        # Startup check: if not running but installed natively, offer to start
+        if not is_container and not is_native and sys.platform == "darwin":
+            if _start_native_ollama(interactive=_is_tty()):
+                is_native = True
+
+        # Determine model family (interactive selection if needed)
+        model_family = getattr(args, "model_family", None)
+        cli_model_family = model_family  # Store original arg
+
+        if not model_family and _is_tty():
+            family_choice = _select_ollama_family_interactive()
+            if family_choice is None:
+                console.print("[yellow]Cancelled.[/yellow]")
+                sys.exit(0)
+
+            if family_choice != "ALL":
+                model_family = family_choice
+
         if is_native:
             console.print(
                 "[green]✔ Ollama is running natively at http://localhost:11434[/green]"
             )
 
-            # If a model/family is specified, instruct how to run it
-            model_family = getattr(args, "model_family", None)
-            if model_family:
-                if _is_tty():
-                    # Interactive selection if family matches multiple/none?
-                    # Rely on selector or just assume model_family is the model name for native run
-                    # Logic below does selection, let's reuse _select_ollama_model_interactive if we want fancy selection
-                    # But simpler: if user gave an arg, assume they want to run it.
-                    # Or check selection logic.
+            # Check config for agents compatibility
+            env_warnings = _check_ollama_process_env()
+            if env_warnings:
+                console.print("\n[yellow]Performance Warning (Native Ollama):[/yellow]")
+                for w in env_warnings:
+                    console.print(f"  {w}")
+                console.print("\nTo fix, restart Ollama with these variables:")
+                console.print("  [bold]export OLLAMA_NUM_CTX=32768[/bold]")
+                console.print("  [bold]export OLLAMA_MAX_LOADED_MODELS=2[/bold]")
+                console.print("  [bold]ollama serve[/bold]\n")
 
-                    # Let's try to match existing logic slightly:
-                    selected_model = _select_ollama_model_interactive(
-                        family=model_family
-                    )
-                    if selected_model:
+            # If we are interactive or have a specific family, select/run model
+            if _is_tty() or model_family:
+                selected_model = _select_ollama_model_interactive(family=model_family)
+                if selected_model:
+                    if shutil.which("ollama"):
+                        console.print(f"\n[green]Running {selected_model}...[/green]")
                         console.print(
-                            f"\nRun the model with:\n  [bold]ollama run {selected_model}[/bold]\n"
+                            "[dim]Starting interactive chat. This verifies the model works and primes the cache.[/dim]"
                         )
-                else:
-                    console.print(
-                        f"\nRun the model with:\n  [bold]ollama run {model_family}[/bold]\n"
-                    )
+                        console.print(
+                            "[dim]Type '/bye' or Ctrl+D to exit. Model will remain in memory for 5m.[/dim]\n"
+                        )
+                        # Use os.execvp to replace current process with ollama run
+                        # This preserves TTY signals and interactive behavior perfectly
+                        try:
+                            os.execvp("ollama", ["ollama", "run", selected_model])
+                        except OSError as e:
+                            console.print(f"[red]Failed to launch ollama: {e}[/red]")
+                    else:
+                        console.print(
+                            "\n[yellow]CLI tool 'ollama' not found, skipping chat.[/yellow]"
+                        )
+                        console.print(
+                            f"To verify/prime manually: [bold]ollama run {selected_model}[/bold]"
+                        )
             else:
                 console.print(
                     "[dim]No model specified. Server is running correctly.[/dim]"
@@ -965,55 +1099,44 @@ def handle_serve(args) -> None:
 
         # Ollama manages its own models
         service = "ollama"
-        model_family = getattr(args, "model_family", None)
 
-        # Handle model selection if family specified
-        if model_family:
-            if _is_tty():
+        # Handle model selection
+        should_select = _is_tty() and (model_family or cli_model_family is None)
+
+        if should_select:
+            if model_family:
                 console.print(
                     f"[cyan]Selecting {model_family} model from Ollama...[/cyan]"
                 )
-                console.print("")
-                selected_model = _select_ollama_model_interactive(family=model_family)
-                if selected_model:
-                    console.print(f"\n[green]Selected: {selected_model}[/green]")
+            else:
+                console.print("[cyan]Selecting model from Ollama...[/cyan]")
+            console.print("")
 
-                    # Check if Ollama is already running
-                    is_container = _is_service_running("ollama")
-                    is_native = not is_container and _check_url(
-                        "http://localhost:11434"
-                    )
+            selected_model = _select_ollama_model_interactive(family=model_family)
+            if selected_model:
+                console.print(f"\n[green]Selected: {selected_model}[/green]")
 
-                    if is_container:
-                        console.print(
-                            "\n[green]Ollama already running (Docker)[/green]"
-                        )
-                        console.print(
-                            f"\nLoad the model with:\n  [bold]docker exec kanoa-ollama ollama run {selected_model}[/bold]\n"
-                        )
-                    elif is_native:
-                        console.print(
-                            "\n[green]Ollama already running (Native)[/green]"
-                        )
-                        console.print(
-                            f"\nLoad the model with:\n  [bold]ollama run {selected_model}[/bold]\n"
-                        )
-                    else:
-                        console.print("\n[cyan]Starting Ollama (Docker)...[/cyan]")
-                        # ... fallback to normal docker start ...
-                        console.print(
-                            f"\nLoad the model with:\n  [bold]docker exec kanoa-ollama ollama run {selected_model}[/bold]\n"
-                        )
-                else:
+                if is_container:
+                    console.print("\n[green]Ollama already running (Docker)[/green]")
                     console.print(
-                        "[yellow]No model selected, starting Ollama server only.[/yellow]"
+                        f"\nTo verify and prime the model cache:\n  [bold]docker exec -it kanoa-ollama ollama run {selected_model}[/bold]\n"
+                    )
+                else:
+                    console.print("\n[cyan]Starting Ollama (Docker)...[/cyan]")
+                    # We print instruction assuming it will start successfully
+                    console.print(
+                        f"\nTo verify and prime the model cache:\n  [bold]docker exec -it kanoa-ollama ollama run {selected_model}[/bold]\n"
                     )
             else:
                 console.print(
-                    f"[yellow]Model family '{model_family}' specified but running non-interactively.[/yellow]"
+                    "[yellow]No model selected, starting Ollama server only.[/yellow]"
                 )
-                console.print("\nList Ollama models with:")
-                console.print("  [bold]docker exec kanoa-ollama ollama list[/bold]")
+        elif model_family:
+            console.print(
+                f"[yellow]Model family '{model_family}' specified but running non-interactively.[/yellow]"
+            )
+            console.print("\nList Ollama models with:")
+            console.print("  [bold]docker exec kanoa-ollama ollama list[/bold]")
     elif runtime == "vllm":
         # vLLM requires a model family
         if not model_family:
@@ -1172,6 +1295,10 @@ def handle_serve(args) -> None:
             )
         return
 
+    # Check docker availability before starting container services
+    if not _ensure_docker_available(interactive=True):
+        sys.exit(1)
+
     if service == "all":
         for name, compose_file in service_map.items():
             if not compose_file.exists():
@@ -1292,11 +1419,168 @@ def _is_service_running(service: str) -> bool:
     return bool(result and result.stdout.strip())
 
 
+def _wait_for_url(url: str, timeout: int = 10) -> bool:
+    """Wait for URL to become available."""
+    import time
+
+    start_time = time.time()
+    while time.time() - start_time < timeout:
+        if _check_url(url):
+            return True
+        time.sleep(0.5)
+    return False
+
+
+def _start_native_ollama(interactive: bool = True) -> bool:
+    """Attempt to start native Ollama if installed."""
+    if sys.platform != "darwin":
+        return False
+
+    if not shutil.which("ollama"):
+        return False
+
+    if interactive:
+        console.print("[cyan]Found native Ollama installation.[/cyan]")
+        if (
+            Prompt.ask(
+                "Native Ollama is not running. Start it now with optimized settings?",
+                choices=["y", "n"],
+                default="y",
+            )
+            == "y"
+        ):
+            # Define optimal environment
+            ollama_env = os.environ.copy()
+            ollama_env["OLLAMA_NUM_CTX"] = "32768"
+            ollama_env["OLLAMA_MAX_LOADED_MODELS"] = "2"
+            ollama_env["OLLAMA_FLASH_ATTENTION"] = "1"
+            ollama_env["OLLAMA_KV_CACHE_TYPE"] = "q8_0"
+
+            console.print(
+                "[blue]Starting 'ollama serve' with optimized environment...[/blue]"
+            )
+            console.print("  [dim]• OLLAMA_NUM_CTX=32768[/dim]")
+            console.print("  [dim]• OLLAMA_MAX_LOADED_MODELS=2[/dim]")
+
+            # We start 'ollama serve' directly (even if brew is avail) to control env vars
+            # This is safer than modifying launchd/brew plists.
+            subprocess.Popen(
+                ["ollama", "serve"],
+                env=ollama_env,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                start_new_session=True,
+            )
+
+            console.print("[dim]Waiting for API...[/dim]")
+            if _wait_for_url("http://localhost:11434", timeout=15):
+                console.print("[green]✔ Native Ollama started[/green]")
+                return True
+            else:
+                console.print("[red]✘ Timed out waiting for Ollama[/red]")
+                return False
+    return False
+
+
+def _stop_native_ollama(interactive: bool = True) -> None:
+    """Check for native Ollama process and offer to stop it."""
+    # Logic only robust on macOS/Linux
+    if sys.platform == "win32":
+        return
+
+    # Check for MacOS launchd service first (prevents auto-restart Loop)
+    if sys.platform == "darwin":
+        try:
+            # Check for brew service
+            res = subprocess.run(
+                ["launchctl", "list"], check=False, capture_output=True, text=True
+            )
+            if "homebrew.mxcl.ollama" in res.stdout:
+                console.print(
+                    "[yellow]Ollama is running as a Homebrew service (launchd).[/yellow]"
+                )
+                if interactive:
+                    if (
+                        Prompt.ask(
+                            "Stop Homebrew Ollama service?",
+                            choices=["y", "n"],
+                            default="n",
+                        )
+                        == "y"
+                    ):
+                        console.print("[blue]Stopping brew service...[/blue]")
+                        # Try brew services first, then launchctl
+                        if shutil.which("brew"):
+                            subprocess.run(
+                                ["brew", "services", "stop", "ollama"], check=False
+                            )
+                        else:
+                            # Fallback to direct unload
+                            subprocess.run(
+                                [
+                                    "launchctl",
+                                    "bootout",
+                                    f"gui/{os.getuid()}/homebrew.mxcl.ollama",
+                                ],
+                                check=False,
+                            )
+                        console.print("[green]Service stopped.[/green]")
+                        return
+                    else:
+                        # User chose not to stop service, so don't try to kill PID either
+                        return
+        except Exception:
+            pass  # Fallback to PID check
+
+    try:
+        # Find pid of 'ollama serve'
+        pgrep = subprocess.run(
+            ["pgrep", "-f", "ollama serve"], check=False, capture_output=True, text=True
+        )
+        if pgrep.returncode == 0 and pgrep.stdout.strip():
+            # There might be multiple lines if there are threads or child processes?
+            # pgrep usually newline separates PIDs.
+            pids = pgrep.stdout.strip().splitlines()
+            # Just take the first one
+            pid = pids[0].split()[0]
+
+            console.print(f"[yellow]Ollama is running natively (PID {pid}).[/yellow]")
+
+            should_stop = False
+            if interactive:
+                # If non-interactive (e.g. script), we might want to default to NO?
+                # Or require a force flag? For now, ask.
+                if (
+                    Prompt.ask(
+                        "Stop native Ollama process?", choices=["y", "n"], default="n"
+                    )
+                    == "y"
+                ):
+                    should_stop = True
+            else:
+                # In non-interactive mode, we skip unless we want to force
+                # Maybe print a warning?
+                pass
+
+            if should_stop:
+                try:
+                    os.kill(int(pid), signal.SIGTERM)
+                    console.print(f"[green]Stopped Ollama (PID {pid})[/green]")
+                except ProcessLookupError:
+                    console.print("[dim]Process already stopped.[/dim]")
+                except PermissionError:
+                    console.print(
+                        f"[red]Permission denied stopping PID {pid}. Try 'sudo kill {pid}'[/red]"
+                    )
+
+    except Exception as e:
+        console.print(f"[red]Error checking native Ollama: {e}[/red]")
+
+
 def handle_stop(args) -> None:
     """Handle the 'stop' command by stopping docker-compose services."""
-    # Check docker availability early
-    if not _ensure_docker_available(interactive=True):
-        sys.exit(1)
+    # Check docker early, but might proceed if targeting native ollama
+    docker_ok = _ensure_docker_available(interactive=False)
 
     mlops_path = resolve_mlops_path()
 
@@ -1327,26 +1611,40 @@ def handle_stop(args) -> None:
 
     # Interactive selection if no service specified
     if service is None:
-        running_services = _get_running_services(service_map)
+        if docker_ok:
+            running_services = _get_running_services(service_map)
+        else:
+            running_services = []
 
-        if not running_services:
+        is_native_ollama = (
+            _check_url("http://localhost:11434") and "ollama" not in running_services
+        )
+
+        if not running_services and not is_native_ollama:
             console.print("[yellow]No running kanoa services detected.[/yellow]")
             return
 
-        # Show interactive menu for running services
+        # Show interactive menu for services
         table = Table(title="Running Services")
         table.add_column("#", style="cyan", width=4)
         table.add_column("Service", style="green")
 
         choices = []
-        for idx, svc in enumerate(running_services, 1):
+        idx = 1
+        for svc in running_services:
             table.add_row(str(idx), svc)
             choices.append((idx, svc))
+            idx += 1
 
-        # Add 'all' option
-        all_idx = len(choices) + 1
-        table.add_row(str(all_idx), "all", style="bold red")
-        choices.append((all_idx, "all"))
+        if is_native_ollama:
+            table.add_row(str(idx), "ollama (native)", style="yellow")
+            choices.append((idx, "ollama"))
+            idx += 1
+
+        if running_services:
+            # Add 'all' option if docker services running
+            table.add_row(str(idx), "all", style="bold red")
+            choices.append((idx, "all"))
 
         console.print(table)
         choice = Prompt.ask(
@@ -1358,12 +1656,15 @@ def handle_stop(args) -> None:
         if choice == "q":
             return
 
-        for idx, svc in choices:
-            if idx == int(choice):
+        for id_val, svc in choices:
+            if id_val == int(choice):
                 service = svc
                 break
 
     if service == "all":
+        if not docker_ok:
+            console.print("[red]Docker not available, cannot stop services.[/red]")
+            return
         # Stop all running services
         running_services = _get_running_services(service_map)
         if not running_services:
@@ -1379,7 +1680,23 @@ def handle_stop(args) -> None:
         if service is None:
             return
 
+        # Handle Native Ollama if specified
+        if service == "ollama" and not _is_service_running("ollama"):
+            if _check_url("http://localhost:11434"):
+                _stop_native_ollama(interactive=_is_tty())
+                return
+            else:
+                # Neither docker nor native running
+                console.print("[yellow]Ollama is not running.[/yellow]")
+                return
+
+        # Fallback to docker stop logic
+        if not docker_ok:
+            _ensure_docker_available(interactive=True)
+            return
+
         compose_file_opt = service_map.get(service)
+
         if compose_file_opt is not None and compose_file_opt.exists():
             console.print(f"[blue]Stopping {service}...[/blue]")
             run_docker_compose(compose_file_opt, "down")
