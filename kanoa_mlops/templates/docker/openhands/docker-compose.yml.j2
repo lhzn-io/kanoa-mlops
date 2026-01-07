@@ -1,12 +1,12 @@
 services:
   openhands:
-    image: ${OPENHANDS_IMAGE:-docker.openhands.dev/openhands/openhands:0.22}
+    image: ${OPENHANDS_IMAGE:-docker.openhands.dev/openhands/openhands:1.1.0}
     container_name: kanoa-openhands
     environment:
-      - SANDBOX_RUNTIME_CONTAINER_IMAGE=${SANDBOX_RUNTIME_CONTAINER_IMAGE:-docker.openhands.dev/openhands/runtime:0.22-nikolaik}
+      - SANDBOX_RUNTIME_CONTAINER_IMAGE=${SANDBOX_RUNTIME_CONTAINER_IMAGE:-docker.openhands.dev/openhands/runtime:1.1.0-nikolaik}
       - WORKSPACE_MOUNT_PATH=${WORKSPACE_BASE:-$PWD/workspace}
       - LLM_API_KEY=${LLM_API_KEY:-ollama}
-      - LLM_BASE_URL=${LLM_BASE_URL:-http://host.orbstack.internal:11434}
+      - LLM_BASE_URL=${LLM_BASE_URL:-http://host.docker.internal:11434}
       - LLM_MODEL=${LLM_MODEL:-ollama/devstral-small-2:24b} # Swapped to your coding model
       - LLM_NUM_CTX=32768 # CRITICAL: Increases the memory/context window
       - LLM_TIMEOUT=300   # Devstral 24B may take a moment to "think" on a Tegra/Mac
