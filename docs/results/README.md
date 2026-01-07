@@ -4,6 +4,8 @@ This directory contains community-contributed benchmark results for various hard
 
 ## Available Results
 
+- [Gemma 3 (12B) on Mac Studio M4 Max (2026-01-06)](./20260106-gemma-3-12b-mac-studio-m4max.md)
+- [Gemma 3 (4B) on Mac Studio M4 Max (2026-01-06)](./20260106-gemma-3-4b-mac-studio-m4max.md)
 - [Gemma 3 (12B) on NVIDIA Jetson Thor (2025-12-12)](./20251212-gemma-3-12b-jetson-thor.md)
 - [Molmo 7B on NVIDIA Jetson Thor (2025-12-12)](./20251212-molmo-7b-jetson-thor.md)
 - [Add your results here!](../source/contributing.md#submitting-benchmark-results)

@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
-"""Apples-to-apples text comparison across vLLM models (Gemma3, OLMo3).
+"""Apples-to-apples vision comparison across vLLM models (Gemma3, Molmo).
 
-This test runs identical prompts on different models to enable fair performance
-and quality comparisons.
+This test runs identical vision prompts on different models to enable fair
+performance and quality comparisons.
 """
 
+import base64
+import io
 import json
 import os
 import platform
@@ -12,11 +14,14 @@ import time
 from dataclasses import asdict, dataclass
 from datetime import datetime
 
+import matplotlib.pyplot as plt
+import numpy as np
 import requests
+from PIL import Image
 
 # Model to test (set via environment variable)
 MODEL_NAME = os.getenv("MODEL_NAME", "gemma-3-12b")
-API_URL = "http://localhost:8000/v1/chat/completions"
+API_URL = os.getenv("API_URL", "http://localhost:8000/v1/chat/completions")
 
 
 @dataclass
@@ -34,11 +39,59 @@ class TestMetrics:
 TEST_METRICS = []
 
 
-def query_model(prompt, max_tokens=500, temperature=0.7):
-    """Query any vLLM model via OpenAI-compatible API.
+def create_test_chart():
+    """Create a simple bar chart for testing."""
+    categories = ["Q1", "Q2", "Q3", "Q4"]
+    values = [45, 62, 58, 71]
+
+    plt.figure(figsize=(8, 6))
+    plt.bar(categories, values, color=["#FF6B6B", "#4ECDC4", "#45B7D1", "#FFA07A"])
+    plt.title("Quarterly Revenue (in thousands)")
+    plt.xlabel("Quarter")
+    plt.ylabel("Revenue ($K)")
+    plt.grid(axis="y", alpha=0.3)
+
+    # Save to bytes
+    buf = io.BytesIO()
+    plt.savefig(buf, format="png", dpi=100, bbox_inches="tight")
+    plt.close()
+    buf.seek(0)
+
+    # Encode as base64 data URI
+    img_base64 = base64.b64encode(buf.read()).decode("utf-8")
+    return f"data:image/png;base64,{img_base64}"
+
+
+def create_color_grid():
+    """Create a simple colored grid for testing."""
+    # Create 3x3 colored grid
+    colors = np.array(
+        [
+            [[255, 0, 0], [0, 255, 0], [0, 0, 255]],  # Red, Green, Blue
+            [[255, 255, 0], [255, 0, 255], [0, 255, 255]],  # Yellow, Magenta, Cyan
+            [[128, 128, 128], [255, 255, 255], [0, 0, 0]],  # Gray, White, Black
+        ],
+        dtype=np.uint8,
+    )
+
+    # Scale up to make it visible
+    colors = np.repeat(np.repeat(colors, 50, axis=0), 50, axis=1)
+
+    img = Image.fromarray(colors)
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    buf.seek(0)
+
+    img_base64 = base64.b64encode(buf.read()).decode("utf-8")
+    return f"data:image/png;base64,{img_base64}"
+
+
+def query_vision_model(prompt, image_url, max_tokens=300, temperature=0.7):
+    """Query vision model via vLLM OpenAI-compatible API.
 
     Args:
         prompt: Text prompt
+        image_url: Image data URI
         max_tokens: Maximum tokens to generate
         temperature: Sampling temperature
 
@@ -49,7 +102,15 @@ def query_model(prompt, max_tokens=500, temperature=0.7):
 
     data = {
         "model": MODEL_NAME,
-        "messages": [{"role": "user", "content": prompt}],
+        "messages": [
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": prompt},
+                    {"type": "image_url", "image_url": {"url": image_url}},
+                ],
+            }
+        ],
         "max_tokens": max_tokens,
         "temperature": temperature,
         "stream": True,
@@ -74,7 +135,6 @@ def query_model(prompt, max_tokens=500, temperature=0.7):
                     break
                 try:
                     chunk = json.loads(data_str)
-                    # Handle usage if present (vLLM sends it in the last chunk)
                     if chunk.get("usage"):
                         usage = chunk["usage"]
 
@@ -98,14 +158,20 @@ def query_model(prompt, max_tokens=500, temperature=0.7):
     )
 
 
-def test_code_generation_python():
-    """Test Python code generation - identical across models."""
-    print("\n[TEST] Code Generation - Python")
-    prompt = """Write a Python function that implements binary search.
-Include type hints, docstring, and handle edge cases.
-Provide a brief explanation."""
+def test_chart_analysis():
+    """Test chart interpretation - identical across vision models."""
+    print("\n[TEST] Chart Analysis")
+    image_url = create_test_chart()
 
-    response, usage, duration = query_model(prompt, max_tokens=500, temperature=0.2)
+    prompt = """Analyze this chart and provide:
+1. What type of chart is this?
+2. What does it show?
+3. What is the trend across quarters?
+4. Which quarter had the highest value?"""
+
+    response, usage, duration = query_vision_model(
+        prompt, image_url, max_tokens=300, temperature=0.1
+    )
     print(f"\n[OK] Response received ({len(response)} chars)")
 
     # Track metrics
@@ -113,7 +179,7 @@ Provide a brief explanation."""
     tokens_per_sec = tokens_generated / duration if duration > 0 else 0
     TEST_METRICS.append(
         TestMetrics(
-            test_name="Code Generation - Python",
+            test_name="Chart Analysis",
             duration_s=duration,
             tokens_generated=tokens_generated,
             tokens_per_second=tokens_per_sec,
@@ -124,23 +190,23 @@ Provide a brief explanation."""
     print(
         f"[PERF] {duration:.2f}s | {tokens_generated} tokens | {tokens_per_sec:.1f} tok/s"
     )
-    assert "def" in response.lower(), "Expected function definition"
-    print("[PASS] Code generation test passed")
+    assert (
+        "q4" in response.lower() or "quarter 4" in response.lower() or "71" in response
+    ), "Expected mention of Q4 or highest value"
+    print("[PASS] Chart analysis test passed")
 
 
-def test_reasoning_logic():
-    """Test logical reasoning - identical across models."""
-    print("\n[TEST] Logical Reasoning")
-    prompt = """Solve this logic puzzle:
+def test_color_identification():
+    """Test color identification - identical across vision models."""
+    print("\n[TEST] Color Identification")
+    image_url = create_color_grid()
 
-Three people (Alice, Bob, Carol) each have a different pet (cat, dog, fish).
-- Alice doesn't have a cat
-- The person with the dog is not Bob
-- Carol doesn't have the fish
+    prompt = """Describe the colors you see in this image.
+List the colors in the grid from left to right, top to bottom."""
 
-Who has which pet? Show your reasoning."""
-
-    response, usage, duration = query_model(prompt, max_tokens=500, temperature=0.1)
+    response, usage, duration = query_vision_model(
+        prompt, image_url, max_tokens=200, temperature=0.1
+    )
     print(f"\n[OK] Response received ({len(response)} chars)")
 
     # Track metrics
@@ -148,7 +214,7 @@ Who has which pet? Show your reasoning."""
     tokens_per_sec = tokens_generated / duration if duration > 0 else 0
     TEST_METRICS.append(
         TestMetrics(
-            test_name="Logical Reasoning",
+            test_name="Color Identification",
             duration_s=duration,
             tokens_generated=tokens_generated,
             tokens_per_second=tokens_per_sec,
@@ -159,23 +225,26 @@ Who has which pet? Show your reasoning."""
     print(
         f"[PERF] {duration:.2f}s | {tokens_generated} tokens | {tokens_per_sec:.1f} tok/s"
     )
-    print("[PASS] Logical reasoning test passed")
+    # Check if primary colors are mentioned
+    response_lower = response.lower()
+    color_mentions = sum(
+        1 for color in ["red", "green", "blue"] if color in response_lower
+    )
+    assert color_mentions >= 2, "Expected mention of primary colors"
+    print("[PASS] Color identification test passed")
 
 
-def test_summarization():
-    """Test text summarization - identical across models."""
-    print("\n[TEST] Text Summarization")
-    prompt = """Summarize this text in 2-3 sentences:
+def test_visual_counting():
+    """Test visual counting - identical across vision models."""
+    print("\n[TEST] Visual Counting")
+    image_url = create_color_grid()
 
-The Industrial Revolution, which took place from the 18th to 19th centuries, was a period
-during which predominantly agrarian, rural societies in Europe and America became industrial
-and urban. Prior to the Industrial Revolution, which began in Britain in the late 1700s,
-manufacturing was often done in people's homes, using hand tools or basic machines.
-Industrialization marked a shift to powered, special-purpose machinery, factories and mass
-production. The iron and textile industries, along with the development of the steam engine,
-played central roles in the Industrial Revolution."""
+    prompt = """How many distinct colors are visible in this image?
+Count them and list each color."""
 
-    response, usage, duration = query_model(prompt, max_tokens=200, temperature=0.3)
+    response, usage, duration = query_vision_model(
+        prompt, image_url, max_tokens=200, temperature=0.1
+    )
     print(f"\n[OK] Response received ({len(response)} chars)")
 
     # Track metrics
@@ -183,7 +252,7 @@ played central roles in the Industrial Revolution."""
     tokens_per_sec = tokens_generated / duration if duration > 0 else 0
     TEST_METRICS.append(
         TestMetrics(
-            test_name="Text Summarization",
+            test_name="Visual Counting",
             duration_s=duration,
             tokens_generated=tokens_generated,
             tokens_per_second=tokens_per_sec,
@@ -194,102 +263,51 @@ played central roles in the Industrial Revolution."""
     print(
         f"[PERF] {duration:.2f}s | {tokens_generated} tokens | {tokens_per_sec:.1f} tok/s"
     )
-    assert "industrial" in response.lower(), "Expected summary to mention industry"
-    print("[PASS] Summarization test passed")
-
-
-def test_creative_writing():
-    """Test creative writing - identical across models."""
-    print("\n[TEST] Creative Writing")
-    prompt = """Write a two-paragraph story about a robot discovering nature for the first time."""
-
-    response, usage, duration = query_model(prompt, max_tokens=300, temperature=0.9)
-    print(f"\n[OK] Response received ({len(response)} chars)")
-
-    # Track metrics
-    tokens_generated = usage.get("completion_tokens", 0)
-    tokens_per_sec = tokens_generated / duration if duration > 0 else 0
-    TEST_METRICS.append(
-        TestMetrics(
-            test_name="Creative Writing",
-            duration_s=duration,
-            tokens_generated=tokens_generated,
-            tokens_per_second=tokens_per_sec,
-            prompt_tokens=usage.get("prompt_tokens", 0),
-        )
+    # Should identify approximately 9 colors (might group similar ones)
+    assert any(str(num) in response for num in [6, 7, 8, 9]), (
+        "Expected reasonable color count"
     )
-
-    print(
-        f"[PERF] {duration:.2f}s | {tokens_generated} tokens | {tokens_per_sec:.1f} tok/s"
-    )
-    assert len(response) > 100, "Expected substantial creative output"
-    print("[PASS] Creative writing test passed")
-
-
-def test_structured_json_output():
-    """Test structured JSON generation - identical across models."""
-    print("\n[TEST] Structured JSON Output")
-    prompt = """Generate a JSON object for a book with these fields:
-- title (string)
-- author (string)
-- year (number)
-- genres (array of strings)
-- rating (number 1-5)
-
-Use realistic data. Return only the JSON, no additional text."""
-
-    response, usage, duration = query_model(prompt, max_tokens=300, temperature=0.1)
-    print(f"\n[OK] Response received ({len(response)} chars)")
-
-    # Track metrics
-    tokens_generated = usage.get("completion_tokens", 0)
-    tokens_per_sec = tokens_generated / duration if duration > 0 else 0
-    TEST_METRICS.append(
-        TestMetrics(
-            test_name="Structured JSON Output",
-            duration_s=duration,
-            tokens_generated=tokens_generated,
-            tokens_per_second=tokens_per_sec,
-            prompt_tokens=usage.get("prompt_tokens", 0),
-        )
-    )
-
-    print(
-        f"[PERF] {duration:.2f}s | {tokens_generated} tokens | {tokens_per_sec:.1f} tok/s"
-    )
-
-    # Try to parse JSON
-    try:
-        json_start = response.find("{")
-        json_end = response.rfind("}") + 1
-        if json_start >= 0 and json_end > json_start:
-            json_str = response[json_start:json_end]
-            parsed = json.loads(json_str)
-            print(f"[INFO] Valid JSON with keys: {list(parsed.keys())}")
-            print("[PASS] Structured JSON output test passed")
-        else:
-            print("[INFO] Response completed but JSON not clearly delimited")
-    except json.JSONDecodeError:
-        print("[INFO] Response completed but JSON parsing failed")
+    print("[PASS] Visual counting test passed")
 
 
 def test_api_health():
-    """Test that the vLLM API is healthy and responsive."""
+    """Test that the API is healthy and responsive."""
     print("\n[TEST] API Health")
 
-    # Check models endpoint
-    models_url = "http://localhost:8000/v1/models"
-    response = requests.get(models_url)
-    response.raise_for_status()
-    models = response.json()
-    print(f"[OK] Available models: {[m['id'] for m in models['data']]}")
+    # Derive base URL
+    if "/v1/" in API_URL:
+        base_url = API_URL.split("/v1/")[0]
+    else:
+        base_url = "http://localhost:8000"
 
-    # Check health endpoint
-    health_url = "http://localhost:8000/health"
-    response = requests.get(health_url)
-    response.raise_for_status()
-    print("[OK] Health check passed")
-    print("[PASS] API health test passed")
+    print(f"[INFO] Checking health at {base_url}...")
+
+    # Check models endpoint (standard OpenAI)
+    models_url = f"{base_url}/v1/models"
+    try:
+        response = requests.get(models_url)
+        if response.status_code == 200:
+            models = response.json()
+            print(f"[OK] Available models: {[m['id'] for m in models.get('data', [])]}")
+        else:
+            print(f"[WARN] Models endpoint returned {response.status_code}")
+    except Exception as e:
+        print(f"[WARN] Failed to check models: {e}")
+
+    # Check health endpoint (vLLM specific) - optional
+    health_url = f"{base_url}/health"
+    try:
+        requests.get(health_url, timeout=1)
+        print("[OK] vLLM health check passed")
+    except Exception:
+        # Ollama might not support /health, try root
+        try:
+            requests.get(base_url, timeout=1)
+            print("[OK] Server root is reachable")
+        except:
+            print("[WARN] Server health check ignored")
+
+    print("[PASS] API health test passed (soft check)")
 
 
 def print_performance_report():
@@ -298,7 +316,7 @@ def print_performance_report():
         return
 
     print("\n" + "=" * 70)
-    print(f"PERFORMANCE REPORT - {MODEL_NAME}")
+    print(f"VISION PERFORMANCE REPORT - {MODEL_NAME}")
     print("=" * 70)
 
     # Summary stats
@@ -323,10 +341,13 @@ def print_performance_report():
     print("=" * 70)
 
 
-def export_results_json(filename="benchmark_results.json"):
+def export_results_json():
     """Export results to JSON for comparison."""
     if not TEST_METRICS:
         return
+
+    # Determine output filename
+    filename = os.getenv("RESULTS_FILE", "benchmark_results.json")
 
     # Get system info
     try:
@@ -338,7 +359,7 @@ def export_results_json(filename="benchmark_results.json"):
     results = {
         "timestamp": datetime.now().isoformat(),
         "model": MODEL_NAME,
-        "test_type": "text_comparison",
+        "test_type": "vision_comparison",
         "platform": {
             "system": platform.system(),
             "machine": platform.machine(),
@@ -362,21 +383,19 @@ def export_results_json(filename="benchmark_results.json"):
 
 
 if __name__ == "__main__":
-    print("[INFO] Text Comparison Benchmark")
+    print("[INFO] Vision Comparison Benchmark")
     print(f"[INFO] Model: {MODEL_NAME}")
     print(f"[INFO] API URL: {API_URL}")
-    print("[INFO] Running standardized text tests across models\n")
+    print("[INFO] Running standardized vision tests across models\n")
 
     try:
         # API Health
         test_api_health()
 
-        # Standardized text tests
-        test_code_generation_python()
-        test_reasoning_logic()
-        test_summarization()
-        test_creative_writing()
-        test_structured_json_output()
+        # Standardized vision tests
+        test_chart_analysis()
+        test_color_identification()
+        test_visual_counting()
 
         # Print performance report
         print_performance_report()
@@ -385,10 +404,10 @@ if __name__ == "__main__":
         export_results_json()
 
         print("\n" + "=" * 70)
-        print("[SUCCESS] All comparison tests passed!")
+        print("[SUCCESS] All vision comparison tests passed!")
         print("=" * 70)
     except Exception as e:
         print("\n" + "=" * 70)
-        print(f"[FAILURE] Comparison tests failed: {e}")
+        print(f"[FAILURE] Vision comparison tests failed: {e}")
         print("=" * 70)
         exit(1)

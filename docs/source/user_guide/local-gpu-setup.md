@@ -5,6 +5,7 @@ This guide covers setting up `kanoa-mlops` on local NVIDIA GPU hardware, includi
 ## Table of Contents
 
 - [Prerequisites](#prerequisites)
+- [macOS Setup (Apple Silicon)](#macos-setup-apple-silicon)
 - [Native Linux Setup](#native-linux-setup)
 - [WSL2 Setup (Windows)](#wsl2-setup-windows)
 - [eGPU Setup (Thunderbolt/OCuLink)](#egpu-setup-thunderboltoculink)
@@ -31,6 +32,41 @@ This guide covers setting up `kanoa-mlops` on local NVIDIA GPU hardware, includi
 - **OS**: Ubuntu 22.04+ (or WSL2 on Windows 11)
 - **Docker**: 24.0+ with NVIDIA Container Toolkit
 - **NVIDIA Driver**: 535+ (550+ for RTX 50 series)
+
+## macOS Setup (Apple Silicon)
+
+For M1/M2/M3 Macs, we recommend running Ollama natively to leverage Metal acceleration for optimal performance.
+
+### 1. Install Ollama
+
+```bash
+brew install ollama
+```
+
+### 2. Start Service
+
+```bash
+# Start as background service
+brew services start ollama
+
+# Or run interactively
+ollama serve
+```
+
+### 3. Verify Metal Acceleration
+
+When running a model, check the server logs. You should see "Metal" being used for computation.
+
+```bash
+ollama run gemma3:4b "Hello!"
+```
+
+### 4. Comparison with Docker
+
+While you *can* run `kanoa-mlops` via Docker on Mac, you will incur meaningful performance overhead compared to native execution. We recommend:
+
+- **Use Native Ollama**: For running models and inference.
+- **Use Docker**: For `kanoa-mlops` monitoring and orchestration tools (Grafana, Prometheus), which can connect to your native Ollama instance via `host.docker.internal`.
 
 ## Native Linux Setup
 

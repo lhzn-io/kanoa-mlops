@@ -248,6 +248,17 @@ ls -la ~/.cache/huggingface/hub/
 
 For detailed setup instructions for your platform, see the [Local GPU Setup Guide](local-gpu-setup.md).
 
+### macOS (Apple Silicon)
+
+For the best performance on M-series chips, use the native Ollama installation rather than Docker.
+
+1. **Install**: `brew install ollama`
+2. **Start Server**: `ollama serve`
+3. **Run Models**: `ollama run gemma3:4b`
+4. **CLI usage**: Compatible with `kanoa mlops` CLI, which will auto-detect the native installation.
+
+See the [Local GPU Setup Guide](local-gpu-setup.md#macos-apple-silicon) for advanced configuration.
+
 ### NVIDIA Jetson Thor
 
 - Use Ollama for best compatibility

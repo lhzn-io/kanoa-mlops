@@ -28,7 +28,17 @@ def detect_architecture() -> ArchConfig:
     Returns:
         ArchConfig with platform-specific settings
     """
+    system = platform.system().lower()
     machine = platform.machine().lower()
+
+    if system == "darwin":
+        return ArchConfig(
+            arch=machine,
+            platform_name="macos-arm64" if machine == "arm64" else "macos-x86_64",
+            cuda_arch="none",
+            vllm_image="vllm/vllm-openai:latest",
+            description="Apple Silicon (M-series)" if machine == "arm64" else "Intel Mac",
+        )
 
     if machine in ("aarch64", "arm64"):
         # ARM64 - check if Jetson Thor

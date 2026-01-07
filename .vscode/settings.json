@@ -32,5 +32,13 @@
     "mypy-type-checker.severity": {
         "error": "Error",
         "note": "Information"
-    }
+    },
+    "google.geminicodeassist.enableShellCommandExecution": true,
+    "terminal.integrated.profiles.osx": {
+        "Homebrew Bash": {
+            "path": "/opt/homebrew/bin/bash",
+            "icon": "terminal-bash"
+        }
+    },
+    "terminal.integrated.defaultProfile.osx": "Homebrew Bash"
 }
