@@ -924,6 +924,45 @@ def handle_serve(args) -> None:
         # These are standalone services
         service = runtime
     elif runtime == "ollama":
+        # Check native availability
+        is_container = _is_service_running("ollama")
+        is_native = not is_container and _check_url("http://localhost:11434")
+
+        if is_native:
+            console.print(
+                "[green]✔ Ollama is running natively at http://localhost:11434[/green]"
+            )
+
+            # If a model/family is specified, instruct how to run it
+            model_family = getattr(args, "model_family", None)
+            if model_family:
+                if _is_tty():
+                    # Interactive selection if family matches multiple/none?
+                    # Rely on selector or just assume model_family is the model name for native run
+                    # Logic below does selection, let's reuse _select_ollama_model_interactive if we want fancy selection
+                    # But simpler: if user gave an arg, assume they want to run it.
+                    # Or check selection logic.
+
+                    # Let's try to match existing logic slightly:
+                    selected_model = _select_ollama_model_interactive(
+                        family=model_family
+                    )
+                    if selected_model:
+                        console.print(
+                            f"\nRun the model with:\n  [bold]ollama run {selected_model}[/bold]\n"
+                        )
+                else:
+                    console.print(
+                        f"\nRun the model with:\n  [bold]ollama run {model_family}[/bold]\n"
+                    )
+            else:
+                console.print(
+                    "[dim]No model specified. Server is running correctly.[/dim]"
+                )
+
+            # Prevent falling through to docker start
+            return
+
         # Ollama manages its own models
         service = "ollama"
         model_family = getattr(args, "model_family", None)
