@@ -1,4 +1,3 @@
-import subprocess
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -29,7 +28,7 @@ def test_resolve_mlops_path_from_config(mock_get_config):
         mock_exists.return_value = True
 
         result = resolve_mlops_path()
-        assert result == expected_path
+        assert result == expected_path.resolve()
 
 
 @patch("kanoa_mlops.plugin.get_mlops_path")
@@ -74,8 +73,9 @@ def test_detect_compose_client_plugin(mock_run):
     mock_run.assert_called_with(
         ["docker", "compose", "version"],
         check=False,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
+        capture_output=True,
+        text=True,
+        timeout=2,
     )
 
 
@@ -145,6 +145,7 @@ def test_image_exists_true(mock_run):
         check=False,
         capture_output=True,
         text=True,
+        timeout=3,
     )
 
 

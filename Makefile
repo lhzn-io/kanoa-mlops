@@ -70,9 +70,9 @@ setup-user:
 
 setup-dev:
 	@echo "Creating/updating conda environment..."
-	conda env create -f environment.yml || conda env update -f environment.yml --prune
+	micromamba create -f environment.yml || micromamba update -f environment.yml --prune
 	@echo ""
-	@echo "Done! Activate with: conda activate kanoa-mlops"
+	@echo "Done! Activate with: micromamba activate kanoa-mlops"
 
 setup: setup-dev
 
@@ -110,7 +110,7 @@ test:
 		echo "  terraform not found - skipping"; \
 	fi
 	@echo "Running unit tests..."
-	@conda run -n kanoa-mlops pytest tests/unit -v
+	@micromamba run -n kanoa-mlops pytest tests/unit -v
 
 gpu-probe:
 	@echo "Probing for NVIDIA GPUs..."
