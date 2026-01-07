@@ -35,8 +35,9 @@ It provides the "brawn" (compute, storage, serving) for local AI interpretation.
 - **NO** "Generated with..." or "Co-Authored-By" footers
 - Keep first line under 72 characters
 
-### Staging Changes
+### Staging and Committing
 
+- **User Confirmation Required**: Do **NOT** stage (`git add`) or commit changes unless the user explicitly requests it.
 - **NEVER use `git add .`** - this stages everything indiscriminately including unrelated changes
 - **ALWAYS stage files explicitly** - use `git add <specific-file>` for each file you modified in this session
 - **Scope commits to current session** - only stage changes you made during the active conversation
