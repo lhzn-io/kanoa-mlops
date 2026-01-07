@@ -33,36 +33,37 @@ def _is_tty() -> bool:
     return sys.stdin.isatty() and sys.stdout.isatty()
 
 
+def _run_docker_command(
+    args: list[str], timeout: int = 3
+) -> subprocess.CompletedProcess | None:
+    """Run a docker command with a timeout to prevent hanging."""
+    try:
+        return subprocess.run(
+            args,
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+        )
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        return None
+
+
 # Detect which compose client is available and cache it
 def _detect_compose_client() -> list[str] | None:
     """Return the base command for docker compose: either ['docker','compose'] or ['docker-compose'].
 
     Returns None if no compose client is available.
     """
-    try:
-        # Prefer 'docker compose' (plugin)
-        rc = subprocess.run(
-            ["docker", "compose", "version"],
-            check=False,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
-        if rc.returncode == 0:
-            return ["docker", "compose"]
-    except FileNotFoundError:
-        pass
+    # Prefer 'docker compose' (plugin)
+    rc = _run_docker_command(["docker", "compose", "version"], timeout=2)
+    if rc and rc.returncode == 0:
+        return ["docker", "compose"]
 
-    try:
-        rc = subprocess.run(
-            ["docker-compose", "--version"],
-            check=False,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
-        if rc.returncode == 0:
-            return ["docker-compose"]
-    except FileNotFoundError:
-        pass
+    # Fallback to docker-compose
+    rc = _run_docker_command(["docker-compose", "--version"], timeout=2)
+    if rc and rc.returncode == 0:
+        return ["docker-compose"]
 
     return None
 
@@ -91,16 +92,8 @@ def _parse_images_from_compose(compose_file: Path) -> list[str]:
 
 def _image_exists(image: str) -> bool:
     """Return True if a Docker image with this name:tag exists locally."""
-    try:
-        result = subprocess.run(
-            ["docker", "images", "-q", image],
-            check=False,
-            capture_output=True,
-            text=True,
-        )
-        return bool(result.stdout.strip())
-    except FileNotFoundError:
-        return False
+    result = _run_docker_command(["docker", "images", "-q", image])
+    return bool(result and result.stdout.strip())
 
 
 # Rich for CLI output (graceful fallback if not available)
@@ -202,32 +195,23 @@ def run_docker_compose(
     except subprocess.CalledProcessError:
         # DIAGNOSTIC: Check for permission issues (docker group)
         try:
-            subprocess.run(
-                ["docker", "info"],
-                check=True,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.PIPE,
-            )
-        except subprocess.CalledProcessError as e:
-            err_msg = None
-            if getattr(e, "stderr", None):
-                try:
-                    err_msg = e.stderr.decode().lower()
-                except Exception:
-                    err_msg = str(e)
-            else:
-                err_msg = str(e).lower()
-
-            if "permission denied" in err_msg and "docker.sock" in err_msg:
-                console.print(
-                    "[red]Error: Permission denied accessing Docker daemon.[/red]"
-                )
-                console.print("You need to add your user to the 'docker' group:")
-                console.print("  [bold]sudo usermod -aG docker $USER[/bold]")
-                console.print(
-                    "  [dim](You may need to log out and back in for this to take effect)[/dim]"
-                )
-                return False
+            # Use safe wrapper to avoid hanging if daemon is totally dead
+            res = _run_docker_command(["docker", "info"], timeout=3)
+            if res and res.returncode != 0:
+                # Capture stderr if available
+                err_msg = res.stderr.lower() if res.stderr else "unknown error"
+                if "permission denied" in err_msg and "docker.sock" in err_msg:
+                    console.print(
+                        "[red]Error: Permission denied accessing Docker daemon.[/red]"
+                    )
+                    console.print("You need to add your user to the 'docker' group:")
+                    console.print("  [bold]sudo usermod -aG docker $USER[/bold]")
+                    console.print(
+                        "  [dim](You may need to log out and back in for this to take effect)[/dim]"
+                    )
+                    return False
+        except Exception:
+            pass
 
         console.print("[red]Error: docker compose command failed.[/red]")
         return False
@@ -839,6 +823,10 @@ def handle_serve(args) -> None:
         console.print("Run: kanoa mlops init --dir ./my-project")
         sys.exit(1)
 
+    # Check docker availability early
+    if not _ensure_docker_available(interactive=True):
+        sys.exit(1)
+
     runtime = getattr(args, "runtime", None)
     model_family = getattr(args, "model_family", None)
     service_map = get_initialized_services(mlops_path)
@@ -1231,13 +1219,9 @@ def handle_serve(args) -> None:
 def _get_running_services(service_map: dict) -> list[str]:
     """Return a list of service names that are currently running."""
     running = set()
-    try:
-        result = subprocess.run(
-            ["docker", "ps", "--format", "{{.Names}}"],
-            check=False,
-            capture_output=True,
-            text=True,
-        )
+    result = _run_docker_command(["docker", "ps", "--format", "{{.Names}}"])
+
+    if result and result.stdout:
         container_names = result.stdout.strip().split("\n")
 
         for cname in container_names:
@@ -1251,35 +1235,30 @@ def _get_running_services(service_map: dict) -> list[str]:
             elif suffix in ["prometheus", "grafana"]:
                 running.add("monitoring")
 
-    except FileNotFoundError:
-        pass
-
     return sorted(running)
 
 
 def _is_service_running(service: str) -> bool:
     """Check if a specific service is currently running."""
-    try:
-        result = subprocess.run(
-            [
-                "docker",
-                "ps",
-                "--format",
-                "{{.Names}}",
-                "--filter",
-                f"name=kanoa-{service}",
-            ],
-            check=False,
-            capture_output=True,
-            text=True,
-        )
-        return bool(result.stdout.strip())
-    except FileNotFoundError:
-        return False
+    result = _run_docker_command(
+        [
+            "docker",
+            "ps",
+            "--format",
+            "{{.Names}}",
+            "--filter",
+            f"name=kanoa-{service}",
+        ]
+    )
+    return bool(result and result.stdout.strip())
 
 
 def handle_stop(args) -> None:
     """Handle the 'stop' command by stopping docker-compose services."""
+    # Check docker availability early
+    if not _ensure_docker_available(interactive=True):
+        sys.exit(1)
+
     mlops_path = resolve_mlops_path()
 
     if not mlops_path:
@@ -1439,6 +1418,72 @@ def _check_url(url: str) -> bool:
         return False
 
 
+def _check_docker_connection(timeout: int = 2) -> bool:
+    """Check if Docker daemon is reachable."""
+    result = _run_docker_command(
+        ["docker", "info"],
+        timeout=timeout,
+    )
+    return result is not None and result.returncode == 0
+
+
+def _ensure_docker_available(interactive: bool = True) -> bool:
+    """Check if Docker is available, offering to start OrbStack on macOS if needed."""
+    if _check_docker_connection():
+        return True
+
+    # Docker is not reachable
+    if interactive:
+        console.print("[yellow]✘ Docker daemon is unreachable[/yellow]")
+
+    # Specific macOS / OrbStack handling
+    if sys.platform == "darwin" and shutil.which("orb"):
+        is_orb_running = False
+        try:
+            subprocess.run(
+                ["pgrep", "-x", "OrbStack"],
+                check=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+            is_orb_running = True
+        except subprocess.CalledProcessError:
+            pass
+
+        if not is_orb_running:
+            if interactive:
+                console.print("  [yellow]OrbStack is stopped.[/yellow]")
+                if _is_tty():
+                    if (
+                        Prompt.ask(
+                            "  Start OrbStack now?", choices=["y", "n"], default="y"
+                        )
+                        == "y"
+                    ):
+                        console.print("  [blue]Starting OrbStack...[/blue]")
+                        subprocess.run(["open", "-a", "OrbStack"], check=False)
+                        console.print(
+                            "  [dim]Please wait a moment for Docker to initialize...[/dim]"
+                        )
+                        # Wait for it to come up
+                        import time
+
+                        for _ in range(15):
+                            time.sleep(1)
+                            if _check_docker_connection():
+                                console.print(
+                                    "  [green]Docker is now available![/green]"
+                                )
+                                return True
+                        console.print("[red]Timed out waiting for Docker.[/red]")
+        elif interactive:
+            console.print(
+                "  [dim]OrbStack is running but Docker socket is unresponsive.[/dim]"
+            )
+
+    return False
+
+
 def handle_status(args) -> None:
     """Show current configuration and running services."""
     mlops_path = resolve_mlops_path()
@@ -1462,32 +1507,41 @@ def handle_status(args) -> None:
     openhands_running = False
     has_running = False
 
-    try:
-        result = subprocess.run(
-            ["docker", "ps", "--format", "table {{.Names}}\t{{.Status}}\t{{.Ports}}"],
-            check=False,
-            capture_output=True,
-            text=True,
-        )
+    # Check connection first to avoid hanging
+    if _ensure_docker_available(interactive=False):
+        try:
+            result = _run_docker_command(
+                [
+                    "docker",
+                    "ps",
+                    "--format",
+                    "table {{.Names}}\t{{.Status}}\t{{.Ports}}",
+                ]
+            )
 
-        lines = result.stdout.strip().split("\n")
-        if len(lines) > 1:  # Header + at least one container
-            for line in lines[1:]:
-                if "kanoa" in line.lower():
-                    console.print(f"  {line}")
-                    has_running = True
-                    if "ollama" in line.lower():
-                        ollama_running = True
-                    if "vllm" in line.lower():
-                        vllm_running = True
-                    if "openhands" in line.lower():
-                        openhands_running = True
+            if result and result.stdout:
+                lines = result.stdout.strip().split("\n")
+                if len(lines) > 1:  # Header + at least one container
+                    for line in lines[1:]:
+                        if "kanoa" in line.lower():
+                            console.print(f"  {line}")
+                            has_running = True
+                            if "ollama" in line.lower():
+                                ollama_running = True
+                            if "vllm" in line.lower():
+                                vllm_running = True
+                            if "openhands" in line.lower():
+                                openhands_running = True
 
-        if not has_running:
-            console.print("  [dim]No kanoa services running[/dim]")
+            if not has_running:
+                console.print("  [dim]No kanoa services running[/dim]")
 
-    except FileNotFoundError:
-        console.print("  [yellow]Docker not available[/yellow]")
+        except FileNotFoundError:
+            console.print("  [yellow]Docker not available[/yellow]")
+    else:
+        console.print("  [yellow]✘ Docker daemon is not reachable[/yellow]")
+        # Invoke specialized check just for display
+        _ensure_docker_available(interactive=True)
 
     # Check Endpoints
     console.print("")
