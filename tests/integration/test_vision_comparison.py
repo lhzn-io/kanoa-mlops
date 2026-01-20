@@ -304,7 +304,7 @@ def test_api_health():
         try:
             requests.get(base_url, timeout=1)
             print("[OK] Server root is reachable")
-        except:
+        except Exception:
             print("[WARN] Server health check ignored")
 
     print("[PASS] API health test passed (soft check)")

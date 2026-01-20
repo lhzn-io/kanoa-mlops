@@ -111,13 +111,13 @@ def query_olmo3(prompt, system_prompt=None, max_tokens=4096, temperature=0.7):
 
                     if "choices" in chunk and len(chunk["choices"]) > 0:
                         delta = chunk["choices"][0].get("delta", {})
-                        
+
                         # Handle content
                         content = delta.get("content", "")
                         if content:
                             print(content, end="", flush=True)
                             full_content.append(content)
-                        
+
                         # Handle reasoning (if present, e.g. for thinking models)
                         reasoning = delta.get("reasoning", "")
                         if reasoning:

@@ -310,7 +310,7 @@ def test_api_health():
                 print("[OK] Ollama is running")
             else:
                 print("[OK] Server root is reachable")
-        except:
+        except Exception:
             print("[WARN] Server health check ignored")
 
     print("[PASS] API health test passed (soft check)")

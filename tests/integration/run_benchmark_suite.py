@@ -5,6 +5,7 @@ Unified benchmark suite runner that works with any model test.
 """
 
 import argparse
+import contextlib  # Ensure contextlib is imported at the top-level
 import json
 import os
 import subprocess
@@ -155,10 +156,8 @@ Examples:
     finally:
         # Cleanup temporary file
         if is_temp_file and os.path.exists(args.results_file):
-            try:
+            with contextlib.suppress(OSError):
                 os.remove(args.results_file)
-            except OSError:
-                pass
 
     if not results:
         print("[ERROR] No successful runs")
