@@ -18,3 +18,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
       - uses: pre-commit/action@v3.0.1
+
+      - name: Run mypy
+        run: mypy kanoa_mlops tests

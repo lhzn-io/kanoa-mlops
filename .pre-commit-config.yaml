@@ -48,14 +48,3 @@ repos:
         always_run: true
         pass_filenames: false
         stages: [pre-commit]
-
-  # Type checking
-  - repo: local
-    hooks:
-      - id: mypy
-        name: mypy
-        entry: python -m mypy
-        language: system
-        types: [python]
-        files: ^(kanoa_mlops|tests)/
-        require_serial: true

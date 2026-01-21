@@ -1,0 +1,63 @@
+services:
+  vllm-nemotron3-nano:
+{% if arch_config.platform_name == "jetson-thor" %}
+    # Jetson Thor: Use NVIDIA's Jetson-optimized vLLM image
+    image: {{ arch_config.vllm_image }}
+{% else %}
+    # x86_64 or Jetson Orin: Use official vLLM image (requires ≥0.13.0 for Nemotron support)
+    image: vllm/vllm-openai:latest
+{% endif %}
+    container_name: kanoa-vllm-nemotron3-nano
+    runtime: nvidia
+    ports:
+      - "8000:8000" # Standard vLLM port
+    volumes:
+      - ${HF_HOME:-~/.cache/huggingface}:/root/.cache/huggingface:rw
+    environment:
+      - CUDA_VISIBLE_DEVICES=0
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=all
+      - HF_HOME=/root/.cache/huggingface
+      - HUGGINGFACE_HUB_CACHE=/root/.cache/huggingface/hub
+      - TRANSFORMERS_CACHE=/root/.cache/huggingface
+      - TRANSFORMERS_VERBOSITY=info
+      - HF_HUB_VERBOSITY=info
+      - HF_HUB_OFFLINE=${HF_HUB_OFFLINE:-0}
+    command: >
+      vllm serve
+      --model ${MODEL_NAME:-nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16}
+      --host 0.0.0.0
+      --port 8000
+      --served-model-name ${SERVED_MODEL_NAME:-nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16}
+      --trust-remote-code
+      --mamba-ssm-cache-dtype float32
+      --max-model-len ${MAX_MODEL_LEN:-131072}
+      --max-num-seqs 5
+      --gpu-memory-utilization 0.8
+      --kv-cache-dtype fp8
+      --enable-chunked-prefill
+{% if arch_config.platform_name == "jetson-thor" %}
+      --quantization fp8
+{% else %}
+      --dtype ${DTYPE:-bfloat16}
+{% endif %}
+{% if arch_config.platform_name != "jetson-thor" %}
+      ${QUANTIZATION_FLAGS:-}
+{% endif %}
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [ gpu ]
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 90s
+
+networks:
+  default:
+    name: kanoa-mlops

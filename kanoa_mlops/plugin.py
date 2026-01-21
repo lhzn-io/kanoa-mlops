@@ -14,19 +14,53 @@ import shutil
 import signal
 import subprocess
 import sys
+import time
 import urllib.error
 import urllib.request
 from pathlib import Path
+from typing import Any
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
-from rich.console import Console
-from rich.prompt import Prompt
-from rich.table import Table
 
 from kanoa_mlops.arch_detect import detect_architecture
 from kanoa_mlops.config import get_mlops_path, get_templates_path, set_mlops_path
+from kanoa_mlops.gpu_detect import get_recommended_config
 
-console = Console()
+# Rich for CLI output (graceful fallback if not available)
+try:
+    from rich.console import Console
+    from rich.prompt import Confirm, Prompt
+    from rich.table import Table
+
+    console: Any = Console()
+except ImportError:
+
+    class _FallbackConsole:
+        def print(self, *args: Any, **kwargs: Any) -> None:
+            # Strip rich markup for plain print
+            text = str(args[0]) if args else ""
+            text = re.sub(r"\[/?[a-z ]+\]", "", text)
+            print(text, **kwargs)
+
+    console: Any = _FallbackConsole()  # type: ignore[no-redef]
+
+    # Define dummy Prompt/Table/Confirm to avoid NameError if referenced
+    class _FallbackPrompt:
+        @staticmethod
+        def ask(*args: Any, **kwargs: Any) -> str:
+            raise RuntimeError("Rich not available")
+
+    class _FallbackTable:
+        pass
+
+    class _FallbackConfirm:
+        @staticmethod
+        def ask(*args: Any, **kwargs: Any) -> bool:
+            raise RuntimeError("Rich not available")
+
+    Prompt: Any = _FallbackPrompt()  # type: ignore[no-redef]
+    Table: Any = _FallbackTable()  # type: ignore[no-redef]
+    Confirm: Any = _FallbackConfirm()  # type: ignore[no-redef]
 
 
 def _is_tty() -> bool:
@@ -96,29 +130,6 @@ def _image_exists(image: str) -> bool:
     result = _run_docker_command(["docker", "images", "-q", image])
     return bool(result and result.stdout.strip())
 
-
-# Rich for CLI output (graceful fallback if not available)
-try:
-    from rich.console import Console
-    from rich.prompt import Prompt
-    from rich.table import Table
-
-    console = Console()
-except ImportError:
-    import re
-
-    class _FallbackConsole:
-        def print(self, *args, **kwargs):
-            # Strip rich markup for plain print
-            text = str(args[0]) if args else ""
-            text = re.sub(r"\[/?[a-z ]+\]", "", text)
-            print(text, **kwargs)
-
-    console = _FallbackConsole()  # type: ignore[assignment]
-
-    # Define dummy Prompt/Table to avoid NameError if referenced
-    Prompt = None  # type: ignore[assignment, misc]
-    Table = None  # type: ignore[assignment, misc]
 
 HTTP_OK = 200
 MIN_OLLAMA_PATH_PARTS = 3
@@ -740,6 +751,7 @@ def _select_vllm_family_interactive(service_map: dict) -> str | None:
         "molmo": "Allen AI Molmo (multimodal vision)",
         "llama-scout": "Meta Llama 4 Scout 17B MoE (16 experts)",
         "scout": "Meta Llama 4 Scout 17B MoE (Ollama)",
+        "nemotron3-nano": "NVIDIA Nemotron 3 Nano 30B (Mamba-2 MoE)",
     }
 
     for idx, family in enumerate(sorted(vllm_families), 1):
@@ -781,6 +793,10 @@ def _select_model_interactive(family: str | None = None) -> str | None:
             "olmo3": ["allenai/olmo-3", "allenai/Olmo-3"],
             "llama-scout": ["meta-llama/llama-4-scout", "meta-llama/Llama-4-Scout"],
             "scout": ["scout", "Scout"],  # For Ollama models
+            "nemotron3-nano": [
+                "nvidia/NVIDIA-Nemotron-3-Nano",
+                "nvidia/nemotron-3-nano",
+            ],
         }
         patterns = family_patterns.get(family.lower(), [])
         if patterns:
@@ -805,6 +821,10 @@ def _select_model_interactive(family: str | None = None) -> str | None:
             elif family == "llama-scout":
                 console.print(
                     "  [bold]hf download meta-llama/Llama-4-Scout-17B-16E-Instruct[/bold]"
+                )
+            elif family == "nemotron3-nano":
+                console.print(
+                    "  [bold]hf download nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16[/bold]"
                 )
         else:
             console.print(
@@ -997,6 +1017,7 @@ def handle_serve(args) -> None:
                 "olmo3": "Allen AI OLMo 3 (text)",
                 "gemma3": "Google Gemma 3 (multimodal)",
                 "molmo": "Allen AI Molmo (multimodal vision)",
+                "nemotron3-nano": "NVIDIA Nemotron 3 Nano 30B (Mamba-2 MoE)",
             }
             for name in sorted(vllm_families):
                 desc = family_desc.get(name, "Model family")
@@ -1138,26 +1159,56 @@ def handle_serve(args) -> None:
             console.print("\nList Ollama models with:")
             console.print("  [bold]docker exec kanoa-ollama ollama list[/bold]")
     elif runtime == "vllm":
-        # vLLM requires a model family
-        if not model_family:
-            # Missing model family - handle based on TTY
+        # vLLM requires NVIDIA GPUs - warn macOS users
+        if sys.platform == "darwin":
+            console.print("[yellow]⚠ vLLM requires NVIDIA CUDA GPUs[/yellow]")
+            console.print("")
+            console.print("vLLM is not compatible with macOS/Apple Silicon.")
+            console.print(
+                "We recommend using Ollama instead, which is optimized for Apple Silicon:"
+            )
+            console.print("")
+            console.print("Ollama benefits on Mac:")
+            console.print("  • Optimized for Apple Silicon (M1/M2/M3)")
+            console.print("  • Efficient use of unified memory (128GB on Mac Studio)")
+            console.print("  • Automatic quantization")
+            console.print("  • Large model library: https://ollama.com/library")
+            console.print("")
+            console.print("Start Ollama with:")
+            console.print("  [bold]kanoa mlops serve ollama[/bold]")
+            console.print("")
             if _is_tty():
-                model_family = _select_vllm_family_interactive(service_map)
-                if model_family is None:
+                if Confirm.ask("Would you like to start Ollama instead?", default=True):
+                    # Redirect to Ollama flow
+                    service = "ollama"
+                    # Skip vLLM-specific logic and jump to service startup
+                else:
                     console.print("[yellow]Cancelled.[/yellow]")
                     sys.exit(0)
-                console.print("")
             else:
-                console.print("[red]Error: model family required for vLLM[/red]")
-                console.print(
-                    "\nUsage: kanoa mlops serve vllm <model-family> [--model <specific-model>]"
-                )
-                console.print("\nAvailable families:")
-                for k in service_map:
-                    if k.startswith("vllm-"):
-                        console.print(f"  • {k.replace('vllm-', '')}")
                 sys.exit(1)
-        service = f"vllm-{model_family}"
+
+        # vLLM requires a model family (only reached if not on macOS or user declined)
+        if service != "ollama":  # Only do vLLM setup if we didn't redirect to Ollama
+            if not model_family:
+                # Missing model family - handle based on TTY
+                if _is_tty():
+                    model_family = _select_vllm_family_interactive(service_map)
+                    if model_family is None:
+                        console.print("[yellow]Cancelled.[/yellow]")
+                        sys.exit(0)
+                    console.print("")
+                else:
+                    console.print("[red]Error: model family required for vLLM[/red]")
+                    console.print(
+                        "\nUsage: kanoa mlops serve vllm <model-family> [--model <specific-model>]"
+                    )
+                    console.print("\nAvailable families:")
+                    for k in service_map:
+                        if k.startswith("vllm-"):
+                            console.print(f"  • {k.replace('vllm-', '')}")
+                    sys.exit(1)
+            service = f"vllm-{model_family}"
     else:
         # Unknown runtime - might be legacy flat service name
         service = runtime
@@ -1204,6 +1255,56 @@ def handle_serve(args) -> None:
     if model_name:
         compose_env["MODEL_NAME"] = model_name
         compose_env["SERVED_MODEL_NAME"] = model_name
+
+        # Auto-configure quantization based on GPU VRAM (if vLLM service)
+        if service and service.startswith("vllm-"):
+            family = service.replace("vllm-", "")
+            try:
+                # Get GPU-based recommendations
+                arch_config = detect_architecture()
+                recommended_config = get_recommended_config(
+                    family, arch_config.gpu_info
+                )
+
+                # Only apply auto-config if user hasn't manually set these variables
+                compose_env.update(
+                    {
+                        key: value
+                        for key, value in recommended_config.items()
+                        if key not in os.environ
+                    }
+                )
+
+                # Show what we're doing
+                if arch_config.gpu_info:
+                    console.print(
+                        f"[cyan]Detected: {arch_config.gpu_info.name} ({arch_config.gpu_info.vram_gb}GB VRAM)[/cyan]"
+                    )
+                    if "QUANTIZATION_FLAGS" in recommended_config:
+                        quant = recommended_config["QUANTIZATION_FLAGS"]
+                        if quant:
+                            console.print(f"[cyan]Auto-configuring: {quant}[/cyan]")
+                        else:
+                            console.print(
+                                "[cyan]VRAM sufficient for full precision (BF16)[/cyan]"
+                            )
+                    if "MAX_MODEL_LEN" in recommended_config:
+                        ctx = recommended_config["MAX_MODEL_LEN"]
+                        ctx_k = int(ctx) // 1024
+                        console.print(f"[cyan]Context window: {ctx_k}K tokens[/cyan]")
+
+            except ValueError as e:
+                # Insufficient VRAM or unsupported config
+                console.print(f"[red]Error: {e}[/red]")
+                console.print(
+                    "\n[yellow]Tip: You can override auto-detection with environment variables:[/yellow]"
+                )
+                console.print('  QUANTIZATION_FLAGS="--quantization fp8" \\')
+                console.print("  kanoa mlops serve vllm ...")
+                sys.exit(1)
+            except Exception:
+                # GPU detection failed - continue without auto-config
+                pass
 
         # Check if model is cached for vLLM services
         if (
@@ -1264,6 +1365,7 @@ def handle_serve(args) -> None:
                 "olmo3": "Allen AI OLMo 3 (text)",
                 "gemma3": "Google Gemma 3 (multimodal)",
                 "molmo": "Allen AI Molmo (multimodal vision)",
+                "nemotron3-nano": "NVIDIA Nemotron 3 Nano 30B (Mamba-2 MoE)",
             }
             for name in sorted(vllm_families):
                 desc = family_desc.get(name, "Model family")
@@ -1421,8 +1523,6 @@ def _is_service_running(service: str) -> bool:
 
 def _wait_for_url(url: str, timeout: int = 10) -> bool:
     """Wait for URL to become available."""
-    import time
-
     start_time = time.time()
     while time.time() - start_time < timeout:
         if _check_url(url):
@@ -1433,22 +1533,16 @@ def _wait_for_url(url: str, timeout: int = 10) -> bool:
 
 def _start_native_ollama(interactive: bool = True) -> bool:
     """Attempt to start native Ollama if installed."""
-    if sys.platform != "darwin":
-        return False
-
-    if not shutil.which("ollama"):
-        return False
-
-    if interactive:
+    # Ensure we're on macOS
+    if sys.platform == "darwin" and shutil.which("ollama") and interactive:
+        # Code below is only reached if interactive==True and we're on macOS with ollama
         console.print("[cyan]Found native Ollama installation.[/cyan]")
-        if (
-            Prompt.ask(
-                "Native Ollama is not running. Start it now with optimized settings?",
-                choices=["y", "n"],
-                default="y",
-            )
-            == "y"
-        ):
+        response = Prompt.ask(
+            "Native Ollama is not running. Start it now with optimized settings?",
+            choices=["y", "n"],
+            default="y",
+        )
+        if response == "y":
             # Define optimal environment
             ollama_env = os.environ.copy()
             ollama_env["OLLAMA_NUM_CTX"] = "32768"
@@ -1479,6 +1573,7 @@ def _start_native_ollama(interactive: bool = True) -> bool:
             else:
                 console.print("[red]✘ Timed out waiting for Ollama[/red]")
                 return False
+
     return False
 
 
@@ -1579,6 +1674,9 @@ def _stop_native_ollama(interactive: bool = True) -> None:
 
 def handle_stop(args) -> None:
     """Handle the 'stop' command by stopping docker-compose services."""
+    stop_successful = True
+    result_message = ""
+
     # Check docker early, but might proceed if targeting native ollama
     docker_ok = _ensure_docker_available(interactive=False)
 
@@ -1591,124 +1689,114 @@ def handle_stop(args) -> None:
     service_map = get_initialized_services(mlops_path)
 
     # Parse arguments
-    # args.service is now a list (nargs="*") or None/empty
     service_parts = getattr(args, "service", [])
-    if not service_parts:
-        service_parts = []
-
-    service = None
+    service_to_stop = None
     if service_parts:
         if len(service_parts) == 1:
-            service = service_parts[0]
+            service_to_stop = service_parts[0]
         elif len(service_parts) >= MIN_VLLM_PARTS and service_parts[0] == "vllm":
-            # Handle 'vllm gemma3' -> 'vllm-gemma3'
-            service = f"vllm-{service_parts[1]}"
+            service_to_stop = f"vllm-{service_parts[1]}"
         else:
-            # Fallback: join with hyphens (e.g. 'vllm-gemma3')
-            # This handles cases where user might type 'vllm-gemma3' as one arg
-            # or potentially other multi-word services in future
-            service = "-".join(service_parts)
+            service_to_stop = "-".join(service_parts)
 
     # Interactive selection if no service specified
-    if service is None:
-        if docker_ok:
-            running_services = _get_running_services(service_map)
-        else:
-            running_services = []
-
+    if service_to_stop is None:
+        running_services = _get_running_services(service_map) if docker_ok else []
         is_native_ollama = (
             _check_url("http://localhost:11434") and "ollama" not in running_services
         )
 
         if not running_services and not is_native_ollama:
             console.print("[yellow]No running kanoa services detected.[/yellow]")
-            return
+            stop_successful = False
+        else:
+            table = Table(title="Running Services")
+            table.add_column("#", style="cyan", width=4)
+            table.add_column("Service", style="green")
 
-        # Show interactive menu for services
-        table = Table(title="Running Services")
-        table.add_column("#", style="cyan", width=4)
-        table.add_column("Service", style="green")
+            choices = []
+            idx = 1
+            for svc in running_services:
+                table.add_row(str(idx), svc)
+                choices.append((idx, svc))
+                idx += 1
 
-        choices = []
-        idx = 1
-        for svc in running_services:
-            table.add_row(str(idx), svc)
-            choices.append((idx, svc))
-            idx += 1
+            if is_native_ollama:
+                table.add_row(str(idx), "ollama (native)", style="yellow")
+                choices.append((idx, "ollama"))
+                idx += 1
 
-        if is_native_ollama:
-            table.add_row(str(idx), "ollama (native)", style="yellow")
-            choices.append((idx, "ollama"))
-            idx += 1
+            if running_services:
+                table.add_row(str(idx), "all", style="bold red")
+                choices.append((idx, "all"))
 
-        if running_services:
-            # Add 'all' option if docker services running
-            table.add_row(str(idx), "all", style="bold red")
-            choices.append((idx, "all"))
+            console.print(table)
+            choice = Prompt.ask(
+                "Select service to stop",
+                choices=[str(i) for i, _ in choices] + ["q"],
+                default="q",
+            )
 
-        console.print(table)
-        choice = Prompt.ask(
-            "Select service to stop",
-            choices=[str(i) for i, _ in choices] + ["q"],
-            default="q",
-        )
+            if choice == "q":
+                stop_successful = False
+            else:
+                for id_val, svc in choices:
+                    if id_val == int(choice):
+                        service_to_stop = svc
+                        break
 
-        if choice == "q":
-            return
-
-        for id_val, svc in choices:
-            if id_val == int(choice):
-                service = svc
-                break
-
-    if service == "all":
-        if not docker_ok:
-            console.print("[red]Docker not available, cannot stop services.[/red]")
-            return
-        # Stop all running services
-        running_services = _get_running_services(service_map)
-        if not running_services:
-            console.print("[yellow]No running services to stop.[/yellow]")
-            return
-
-        for name in running_services:
-            compose_file = service_map.get(name)
-            if compose_file and compose_file.exists():
-                console.print(f"[blue]Stopping {name}...[/blue]")
-                run_docker_compose(compose_file, "down")
-    else:
-        if service is None:
-            return
-
+    if stop_successful and service_to_stop:
+        if service_to_stop == "all":
+            if not docker_ok:
+                console.print("[red]Docker not available, cannot stop services.[/red]")
+                stop_successful = False
+            else:
+                running_services = _get_running_services(service_map)
+                if not running_services:
+                    console.print("[yellow]No running services to stop.[/yellow]")
+                    stop_successful = False
+                else:
+                    for name in running_services:
+                        compose_file = service_map.get(name)
+                        if compose_file and compose_file.exists():
+                            console.print(f"[blue]Stopping {name}...[/blue]")
+                            if not run_docker_compose(compose_file, "down"):
+                                stop_successful = False
+                                result_message = f"[red]Failed to stop {name}.[/red]"
+                                break
         # Handle Native Ollama if specified
-        if service == "ollama" and not _is_service_running("ollama"):
+        elif service_to_stop == "ollama" and not _is_service_running("ollama"):
             if _check_url("http://localhost:11434"):
                 _stop_native_ollama(interactive=_is_tty())
-                return
+                stop_successful = True
             else:
-                # Neither docker nor native running
                 console.print("[yellow]Ollama is not running.[/yellow]")
-                return
-
+                stop_successful = False
         # Fallback to docker stop logic
-        if not docker_ok:
+        elif not docker_ok:
             _ensure_docker_available(interactive=True)
-            return
-
-        compose_file_opt = service_map.get(service)
-
-        if compose_file_opt is not None and compose_file_opt.exists():
-            console.print(f"[blue]Stopping {service}...[/blue]")
-            run_docker_compose(compose_file_opt, "down")
+            stop_successful = False
         else:
-            console.print(f"[red]Error: Service '{service}' not found.[/red]")
-            # Try to be helpful if they typed 'vllm gemma3' but it didn't match
-            if service.startswith("vllm-"):
+            compose_file_opt = service_map.get(service_to_stop)
+            if compose_file_opt is not None and compose_file_opt.exists():
+                console.print(f"[blue]Stopping {service_to_stop}...[/blue]")
+                if not run_docker_compose(compose_file_opt, "down"):
+                    stop_successful = False
+                    result_message = f"[red]Failed to stop {service_to_stop}[/red]"
+            else:
                 console.print(
-                    f"Did you mean: kanoa mlops stop vllm {service.replace('vllm-', '')}?"
+                    f"[red]Error: Service '{service_to_stop}' not found.[/red]"
                 )
+                if service_to_stop.startswith("vllm-"):
+                    console.print(
+                        f"Did you mean: kanoa mlops stop vllm {service_to_stop.replace('vllm-', '')}?"
+                    )
+                stop_successful = False
 
-    console.print("[green]✔ Services stopped.[/green]")
+    if stop_successful:
+        console.print("[green]✔ Services stopped.[/green]")
+    elif result_message:
+        console.print(result_message)
 
 
 def handle_restart(args) -> None:
@@ -1807,31 +1895,23 @@ def _ensure_docker_available(interactive: bool = True) -> bool:
             pass
 
         if not is_orb_running:
-            if interactive:
-                console.print("  [yellow]OrbStack is stopped.[/yellow]")
-                if _is_tty():
-                    if (
-                        Prompt.ask(
-                            "  Start OrbStack now?", choices=["y", "n"], default="y"
-                        )
-                        == "y"
-                    ):
-                        console.print("  [blue]Starting OrbStack...[/blue]")
-                        subprocess.run(["open", "-a", "OrbStack"], check=False)
-                        console.print(
-                            "  [dim]Please wait a moment for Docker to initialize...[/dim]"
-                        )
-                        # Wait for it to come up
-                        import time
-
-                        for _ in range(15):
-                            time.sleep(1)
-                            if _check_docker_connection():
-                                console.print(
-                                    "  [green]Docker is now available![/green]"
-                                )
-                                return True
-                        console.print("[red]Timed out waiting for Docker.[/red]")
+            if (
+                interactive
+                and _is_tty()
+                and Prompt.ask("  Start OrbStack now?", choices=["y", "n"], default="y")
+                == "y"
+            ):
+                console.print("  [blue]Starting OrbStack...[/blue]")
+                subprocess.run(["open", "-a", "OrbStack"], check=False)
+                console.print(
+                    "  [dim]Please wait a moment for Docker to initialize...[/dim]"
+                )
+                for _ in range(15):
+                    time.sleep(1)
+                    if _check_docker_connection():
+                        console.print("  [green]Docker is now available![/green]")
+                        return True
+                console.print("[red]Timed out waiting for Docker.[/red]")
         elif interactive:
             console.print(
                 "  [dim]OrbStack is running but Docker socket is unresponsive.[/dim]"
@@ -2006,6 +2086,10 @@ def handle_list(args) -> None:
                 "gemma3": ["google/gemma-3", "google/gemma3"],
                 "molmo": ["allenai/molmo", "allenai/Molmo"],
                 "olmo3": ["allenai/olmo-3", "allenai/Olmo-3"],
+                "nemotron3-nano": [
+                    "nvidia/NVIDIA-Nemotron-3-Nano",
+                    "nvidia/nemotron-3-nano",
+                ],
             }
 
             # Categorize models by family
@@ -2032,7 +2116,7 @@ def handle_list(args) -> None:
 
             # Display models by family
             first_family = True
-            for family in ["gemma3", "molmo", "olmo3"]:
+            for family in ["gemma3", "molmo", "olmo3", "nemotron3-nano"]:
                 models = family_models[family]
                 if models:
                     if first_family:

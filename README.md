@@ -87,8 +87,8 @@ For maximum throughput on NVIDIA GPUs:
 # Download model (~14GB)
 huggingface-cli download allenai/Molmo-7B-D-0924
 
-# Start vLLM server
-docker compose -f docker/vllm/docker-compose.molmo.yml up -d
+# Start vLLM server (auto-detects GPU, configures quantization)
+kanoa mlops serve vllm molmo --model allenai/Molmo-7B-D-0924
 
 # Verify
 curl http://localhost:8000/health
@@ -96,21 +96,27 @@ curl http://localhost:8000/health
 
 ## Platform Guidance
 
-- **x86/CUDA GPUs** (RTX 4090, 5080, etc.): Use vLLM for best performance
-- **Jetson Thor/ARM64**: Use Ollama for Scout (vLLM Thor image lacks bitsandbytes quantization)
-- **Easy Setup**: Ollama handles quantization automatically (65GB Q4 vs 203GB full)
-- **Production**: vLLM offers more control over inference parameters
+- **macOS (Apple Silicon)**: Use **Ollama** - optimized for Apple Silicon, handles 128GB unified memory efficiently
+- **Desktop/eGPU** (NVIDIA 12GB+): Use **vLLM** with automatic GPU detection and quantization
+  - Minimum: RTX 3060 12GB (7B models with quantization)
+  - Recommended: RTX 4070/5070 12GB+ (up to 12B models)
+  - Ideal: RTX 5080 16GB, RTX 4090 24GB (large models like Nemotron 30B)
+- **Laptop** (NVIDIA 8GB+): Use **vLLM** or **Ollama** depending on VRAM
+  - Minimum: RTX 4060 Laptop 8GB (smaller models, Ollama recommended)
+  - Recommended: RTX 4070 Laptop 12GB+ (vLLM works well)
+- **Jetson Thor** (128GB): Use **Ollama** for most models (vLLM Thor lacks some quantization support)
+- **Cloud**: GCP infrastructure ready (Terraform configs provided, not yet tested)
 
 #### Advanced Models
 
-For the Olmo3 32B Think model (requires significant GPU memory):
+For the OLMo3 32B Think model (requires significant GPU memory):
 
 ```bash
-# Download model (~32GB) - requires Hugging Face authentication for gated models
-huggingface-cli download allenai/Olmo-3-32B-Think
+# Download model (~32GB)
+huggingface-cli download allenai/Olmo-3-7B-Think
 
-# Start vLLM server (optimized for Jetson Thor with 128GB Unified Memory)
-make serve-olmo3-32b
+# Start vLLM server (auto-configures for your GPU)
+kanoa mlops serve vllm olmo3 --model allenai/Olmo-3-7B-Think
 
 # Verify
 curl http://localhost:8000/health
@@ -120,38 +126,50 @@ curl http://localhost:8000/health
 
 | Backend | Best For | Hardware | Throughput | Setup |
 | :--- | :--- | :--- | :--- | :--- |
-| **Ollama** | Getting started, CPU/Apple Silicon | Any | ~15 tok/s | `kanoa mlops serve ollama` |
-| **vLLM** | Production, maximum speed | NVIDIA GPU | ~31 tok/s | Docker Compose |
-| **GCP L4** | No local GPU, team sharing | Cloud | ~25 tok/s | Terraform |
+| **Ollama** | macOS, laptops (8GB VRAM), getting started | Any (CPU/GPU/Apple Silicon) | ~15 tok/s | `kanoa mlops serve ollama` |
+| **vLLM** | Desktop/eGPU (12GB+ VRAM), maximum speed | Linux/Windows + NVIDIA GPU (12GB+) | ~31 tok/s | `kanoa mlops serve vllm` |
+| **GCP** | No local GPU, team sharing | Cloud (planned, not tested) | Est. ~25 tok/s | Terraform configs ready |
 
-### Ollama (Easiest)
+### Ollama (Recommended for macOS)
 
-Perfect for development, VSCode integration, and broader hardware support.
+Perfect for Apple Silicon Macs, development, VSCode integration, and broader hardware support.
 
 ```bash
 kanoa mlops serve ollama
 # → Ollama running at http://localhost:11434
+
+# For Mac Studio with 128GB RAM, you can run large models!
+docker exec kanoa-ollama ollama pull llama3.1:70b
+docker exec kanoa-ollama ollama pull qwen2.5:72b
 ```
 
 Supports: Gemma 3 (4B/12B), Llama 3, Mistral, and [many more](https://ollama.com/library).
 
-### vLLM (Fastest)
+**Why Ollama for macOS?**
+- Optimized for Apple Silicon (M1/M2/M3)
+- Efficiently uses unified memory (128GB on Mac Studio)
+- No CUDA required
+- Automatic quantization (Q4/Q5/Q8)
 
-Optimized inference with CUDA, batching, and OpenAI-compatible API.
+### vLLM (Fastest for NVIDIA GPUs)
+
+Optimized inference with CUDA, batching, and OpenAI-compatible API. **Requires Linux/Windows with NVIDIA GPU.**
 
 ```bash
-# Molmo 7B (best for vision)
-docker compose -f docker/vllm/docker-compose.molmo.yml up -d
+# Auto-detects GPU VRAM and configures quantization
+kanoa mlops serve vllm nemotron3-nano --model nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16
 
-# Gemma 3 12B (best for reasoning)
-docker compose -f docker/vllm/docker-compose.gemma.yml up -d
+# Or use interactive model selection
+kanoa mlops serve vllm molmo
 ```
 
 Endpoints: `http://localhost:8000/v1/chat/completions`
 
-### GCP Cloud GPU (Scalable)
+**Note for macOS users:** vLLM requires NVIDIA CUDA GPUs. Use Ollama instead for Apple Silicon Macs.
 
-For users without local GPUs or production workloads.
+### GCP Cloud GPU (Planned)
+
+For users without local GPUs or production workloads. Terraform infrastructure is ready but not yet tested.
 
 ```bash
 cd infrastructure/gcp
@@ -159,7 +177,7 @@ cp terraform.tfvars.example terraform.tfvars  # Configure
 terraform apply
 ```
 
-Features: L4 GPU (~$0.70/hr), auto-shutdown, IP-restricted firewall.
+**Planned Features:** L4 GPU (~$0.70/hr), auto-shutdown, IP-restricted firewall.
 
 ## Using with kanoa
 
@@ -284,14 +302,20 @@ Llama 3.1, Mistral, Qwen 2.5, and [100+ more](https://ollama.com/library).
 
 ## Hardware Compatibility
 
-| Platform | Status | Notes |
-| :--- | :--- | :--- |
-| NVIDIA RTX (Desktop/Laptop) | [✓] Verified | RTX 3080+ recommended |
-| NVIDIA RTX (eGPU) | [✓] Verified | TB3/TB4 bandwidth sufficient |
-| NVIDIA Jetson Thor | [✓] Verified | 128GB Unified Memory, Blackwell GPU |
-| Apple Silicon | [✓] Ollama | M1/M2/M3 via Ollama |
-| GCP L4 GPU | [✓] Verified | 24GB VRAM, ~$0.70/hr |
-| Intel/AMD GPU | — | Not supported |
+| Platform | Status | Minimum VRAM | Recommended | Notes |
+| :--- | :--- | :--- | :--- | :--- |
+| **Desktop GPU** | [✓] Verified | 12GB | 16GB+ | RTX 3060 12GB minimum, RTX 5080 16GB ideal |
+| **eGPU** (TB3/TB4) | [✓] Verified | 12GB | 16GB+ | ~15% slower than native PCIe, RTX 5080 tested |
+| **Laptop GPU** | [✓] Verified | 8GB | 12GB+ | RTX 4060 8GB with Ollama, RTX 4070 12GB+ for vLLM |
+| **Jetson Thor** | [✓] Verified | 128GB | 128GB | Unified memory, Blackwell GPU |
+| **Apple Silicon** | [✓] Ollama | 16GB | 64GB+ | M1/M2/M3 via Ollama, Mac Studio 128GB ideal |
+| **GCP L4** | [ ] Planned | 24GB | 24GB | Cloud GPU, ~$0.70/hr (Terraform ready) |
+| Intel/AMD GPU | — | — | — | Not supported (no CUDA) |
+
+**Why these minimums?**
+- **12GB**: Can run Molmo 7B, Gemma 3 12B, OLMo 3 7B with FP8 quantization
+- **16GB**: Can run Nemotron 3 Nano 30B with FP8, most models comfortably
+- **24GB+**: Can run large models in BF16 full precision
 
 ## Development Setup
 

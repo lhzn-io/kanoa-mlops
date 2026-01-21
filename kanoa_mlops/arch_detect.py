@@ -8,6 +8,9 @@ import platform
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Optional
+
+from kanoa_mlops.gpu_detect import GPUInfo, detect_gpu
 
 
 @dataclass
@@ -19,6 +22,7 @@ class ArchConfig:
     cuda_arch: str  # sm_110, sm_120
     vllm_image: str  # Docker image for vLLM
     description: str
+    gpu_info: Optional[GPUInfo] = None  # Detected GPU information
 
 
 def detect_architecture() -> ArchConfig:
@@ -30,6 +34,7 @@ def detect_architecture() -> ArchConfig:
     """
     system = platform.system().lower()
     machine = platform.machine().lower()
+    gpu_info = detect_gpu()  # Detect GPU for all platforms
 
     if system == "darwin":
         return ArchConfig(
@@ -37,7 +42,10 @@ def detect_architecture() -> ArchConfig:
             platform_name="macos-arm64" if machine == "arm64" else "macos-x86_64",
             cuda_arch="none",
             vllm_image="vllm/vllm-openai:latest",
-            description="Apple Silicon (M-series)" if machine == "arm64" else "Intel Mac",
+            description="Apple Silicon (M-series)"
+            if machine == "arm64"
+            else "Intel Mac",
+            gpu_info=gpu_info,
         )
 
     if machine in ("aarch64", "arm64"):
@@ -49,6 +57,7 @@ def detect_architecture() -> ArchConfig:
                 cuda_arch="sm_110",
                 vllm_image="ghcr.io/nvidia-ai-iot/vllm:latest-jetson-thor",
                 description="NVIDIA Jetson Thor (Blackwell sm_110)",
+                gpu_info=gpu_info,
             )
         else:
             return ArchConfig(
@@ -57,16 +66,21 @@ def detect_architecture() -> ArchConfig:
                 cuda_arch="sm_87",
                 vllm_image="dustynv/vllm:r36.4-cu129-24.04",
                 description="NVIDIA Jetson Orin/Xavier (sm_87)",
+                gpu_info=gpu_info,
             )
 
     elif machine in ("x86_64", "amd64"):
-        # x86_64 - assume eGPU with Blackwell (RTX 5080)
+        # x86_64 - detect GPU and build description
+        desc = "x86_64 with NVIDIA GPU"
+        if gpu_info:
+            desc += f" ({gpu_info.name}, {gpu_info.vram_gb}GB VRAM)"
         return ArchConfig(
             arch="x86_64",
             platform_name="x86-cuda",
             cuda_arch="sm_120",
             vllm_image="vllm/vllm-openai:latest",
-            description="x86_64 with NVIDIA GPU (Blackwell sm_120)",
+            description=desc,
+            gpu_info=gpu_info,
         )
 
     else:
@@ -77,6 +91,7 @@ def detect_architecture() -> ArchConfig:
             cuda_arch="none",
             vllm_image="vllm/vllm-openai:latest",
             description=f"Unknown architecture: {machine}",
+            gpu_info=gpu_info,
         )
 
 
